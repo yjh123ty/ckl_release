@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.ForumTopicMapper" >
+  <resultMap type="tech.youmu.ckl.app.vo.ForumTopicInfo" id="forumTopicInfoMap">  
+        <result column="forumTopicId" property="forumTopicId"/>  
+        <result column="userId" property="userId"/>  
+        <result column="userName" property="userName"/>  
+        <result column="headIcon" property="headIcon"/>  
+        <result column="content" property="content"/> 
+        <result column="time" property="time"/>
+        <result column="commentCount" property="commentCount"/> 
+        <result column="praiseCount" property="praiseCount"/>  
+        <result column="isPraise" property="isPraise"/> 
+        <result column="shareInImg" property="shareInImg"/> 
+        <result column="type" property="type"/> 
+        <result column="shareInId" property="shareInId"/> 
+        <collection property="imgs" javaType="java.util.List" ofType="java.lang.String" >
+         <result column="img" property="img"/> 
+        </collection>  
+    </resultMap>
+  <select id="findForumTopicInfo" resultMap="forumTopicInfoMap"  >
+    select 
+	  ft.id forumTopicId,u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,
+	  ft.content content,DATE_FORMAT(ft.create_time, '%m-%d %H:%i') time,count(DISTINCT ftc.id) commentCount,
+	  count(DISTINCT ftp.id) praiseCount,ft.type,ft.share_in_img shareInImg,ft.share_in_id shareInId,
+	  if(find_in_set(#{userId},group_concat(DISTINCT ftp.user_id))>0,1,0) isPraise,fti.url img
+	from 
+		(select id,content, top, user_id,create_time,type,share_in_img,share_in_id from forum_topic
+			where is_del = 0
+			<if test="friendId !=null">
+				and user_id = #{friendId}
+			</if>
+			order by create_time desc
+			<if test="startRow !=null and rows !=null">
+				limit #{startRow},#{rows}
+			</if>
+		) ft 
+	left join forum_topic_image fti on fti.forum_topic_id = ft.id
+	LEFT JOIN user u on u.id = ft.user_id and u.is_del =0
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ft.user_id and uf.is_del =0
+	LEFT JOIN forum_topic_comment ftc on ftc.forum_topic_id = ft.id and ftc.type = 1 and ftc.is_del =0
+	LEFT JOIN forum_topic_praise ftp on ftp.forum_topic_id = ft.id and ftp.is_del = 0
+	
+	GROUP BY ft.id,fti.id
+	order by ft.top desc,ft.create_time desc
+  </select>
+  
+  
+  <resultMap type="tech.youmu.ckl.app.vo.ForumTopicDetailInfo" id="forumTopicDetailInfoMap">  
+        <result column="forumTopicId" property="forumTopicId"/>  
+        <result column="userId" property="userId"/>  
+        <result column="userName" property="userName"/>  
+        <result column="headIcon" property="headIcon"/>  
+        <result column="content" property="content"/> 
+        <result column="time" property="time"/>
+        <result column="commentCount" property="commentCount"/> 
+        <result column="praiseCount" property="praiseCount"/>  
+        <result column="isPraise" property="isPraise"/> 
+        <result column="type" property="type"/> 
+         <result column="shareInImg" property="shareInImg"/> 
+        <result column="shareInId" property="shareInId"/> 
+        <collection property="imgs" javaType="java.util.List" ofType="java.lang.String" >
+         <result column="img" property="img"/> 
+        </collection>  
+    </resultMap>
+  <select id="getForumTopicDetailInfo" resultMap="forumTopicDetailInfoMap"  >
+    select 
+	  ft.id forumTopicId,u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,
+	  ft.content content,DATE_FORMAT(ft.create_time, '%m-%d %H:%i') time,count(DISTINCT ftc.id) commentCount,
+	  count(DISTINCT ftp.id) praiseCount,ft.type,ft.share_in_img shareInImg,ft.share_in_id shareInId,
+	  if(find_in_set(#{userId},group_concat(DISTINCT ftp.user_id))>0,1,0) isPraise,fti.url img
+	from forum_topic ft 
+	left join forum_topic_image fti on fti.forum_topic_id = ft.id
+	LEFT JOIN user u on u.id = ft.user_id and u.is_del =0
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ft.user_id and uf.is_del =0
+	LEFT JOIN forum_topic_comment ftc on ftc.forum_topic_id = ft.id and ftc.type = 1 and ftc.is_del =0
+	LEFT JOIN forum_topic_praise ftp on ftp.forum_topic_id = ft.id and ftp.is_del = 0
+	where ft.id=#{forumTopicId}
+	GROUP BY fti.id
+  </select>
+
+  <select id="getById" resultType="tech.youmu.ckl.domain.ForumTopic"  >
+    select 
+	  ft.id id,ft.user_id userId,ft.content content
+	from forum_topic ft 
+	where  ft.id=#{id} and ft.is_del = 0
+  </select>
+  
+  <select id="isPraiseForumTopic" resultType="java.lang.Boolean"  >
+    select 
+	 	if(count(ftp.id)=0,0,1)
+	from forum_topic_praise ftp 
+	where  ftp.forum_topic_id=#{forumTopicId} and ftp.user_id =#{userId} and ftp.is_del =0
+  </select>
+  
+  <insert id="praiseForumTopic"  >
+    insert into forum_topic_praise ( user_id,is_del,create_time,forum_topic_id)
+    values ( #{userId},0,now(),#{forumTopicId})
+  </insert>
+  
+  <insert id="save"  useGeneratedKeys="true" keyProperty="id">
+    insert into forum_topic ( user_id,is_del,create_time,content,share_in_id,share_in_img,type)
+    values ( #{userId},0,now(),#{content},#{shareInId},#{shareInImg},#{type})
+  </insert>
+  <update id="update"  >
+    update forum_topic
+    <set >
+      <if test="userId != null" >
+        user_id = #{userId},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+      <if test="modifyTime != null" >
+        modify_time = #{modifyTime},
+      </if>
+      <if test="content != null" >
+        content = #{content},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  <insert id="batchSaveImg">
+	insert into forum_topic_image (url,forum_topic_id,is_del, create_time)values
+	<foreach collection="urls" item="item" index="index" separator=",">
+		( #{item},#{forumTopicId},0,now())
+	</foreach>
+  </insert>
+  
+   <insert id="saveForumTopicComment" >
+    insert into forum_topic_comment (user_id, content,forum_topic_id, is_del, type, create_time,by_reply_id,by_reply_content)
+    values ( #{userId}, #{content},#{forumTopicId},0, #{type}, now(),#{byReplyId},#{byReplyContent})
+  </insert>
+  
+  <select id="findForumTopicPraiseInfo" resultType="tech.youmu.ckl.app.vo.ForumTopicPraiseInfo"  >
+    SELECT 
+    	u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon  
+    from forum_topic_praise ftp 
+	LEFT JOIN user u on u.id = ftp.user_id and u.is_del =0
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ftp.user_id and uf.is_del =0
+	where  ftp.forum_topic_id=#{forumTopicId} and ftp.is_del =0 and u.id is not null
+	order by ftp.create_time 
+  </select>
+  
+   <select id="findForumTopicCommentInfo" resultType="tech.youmu.ckl.app.vo.ForumTopicCommentInfo"  >
+    SELECT ftc.content ,if(ruf.note is null,ru.nick_name,ruf.note) byReplyName,
+    DATE_FORMAT(ftc.create_time, '%m-%d %H:%i') time,ftc.type,
+    u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon  
+    from forum_topic_comment ftc 
+	LEFT JOIN user u on u.id = ftc.user_id and u.is_del =0
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ftc.user_id and uf.is_del =0
+	LEFT JOIN user ru on ru.id = ftc.by_reply_id and ru.is_del =0
+	left join user_friend ruf on ruf.user_id =#{userId} and ruf.friend_id=ftc.by_reply_id and ruf.is_del =0
+	where  ftc.forum_topic_id=#{forumTopicId} and ftc.is_del =0
+	order by ftc.create_time desc
+  </select>
+  
+  
+   <select id="findPraiseDetailInfo" resultType="tech.youmu.ckl.app.vo.PraiseDetailInfo"  >
+    SELECT 
+    	u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,
+    	if(DATE_FORMAT(ftp.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(ftp.create_time, '%m-%d %H:%i'),DATE_FORMAT(ftp.create_time, '%Y-%m-%d %H:%i'))  time,
+    	ft.id topicId,ft.content,fti.url img,pu.nick_name postUserName
+    from forum_topic_praise ftp 
+  	left join forum_topic ft on ft.id = ftp.forum_topic_id and ft.is_del =0
+  	LEFT JOIN user pu on pu.id = ft.user_id and pu.is_del =0
+	LEFT JOIN user u on u.id = ftp.user_id and u.is_del =0
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ftp.user_id and uf.is_del =0
+	left join forum_topic_image fti on fti.forum_topic_id = ft.id and fti.is_del=0
+	where  ft.user_id=#{userId} and ftp.is_del =0
+  	GROUP BY ftp.id
+	order by ftp.create_time desc
+  </select>
+  
+  <select id="findTopicCommentDetailInfo" resultType="tech.youmu.ckl.app.vo.TopicCommentDetailInfo"  >
+	   select u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,
+	    	if(DATE_FORMAT(ftc.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(ftc.create_time, '%m-%d %H:%i'),DATE_FORMAT(ftc.create_time, '%Y-%m-%d %H:%i'))  time,
+	    	ft.id topicId,ft.content topicContent,fti.url img,pu.nick_name postUserName,
+			ftc.type,ftc.content,1 topicType,
+			null title,null startTime,null endTime,null routeName,
+			if(ruf.note is null,ru.nick_name,ruf.note) byReplyName,ftc.by_reply_content byReplyContent
+		from forum_topic_comment ftc 
+		LEFT JOIN forum_topic ft on ft.id = ftc.forum_topic_id and ft.is_del =0
+		left join forum_topic_image fti on fti.forum_topic_id = ft.id and fti.is_del=0
+		LEFT JOIN user pu on pu.id = ft.user_id and pu.is_del =0
+		LEFT JOIN user u on u.id = ftc.user_id and u.is_del =0
+		left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ftc.user_id and uf.is_del =0
+		LEFT JOIN user ru on ru.id = ftc.by_reply_id and ru.is_del =0
+		left join user_friend ruf on ruf.user_id =#{userId} and ruf.friend_id=ftc.by_reply_id and ruf.is_del =0
+		where ftc.id is not null and ft.id is not null and u.id is not null
+		<choose>
+        	<when test="type == 2">
+        		and (ftc.user_id=#{userId})
+			</when>
+			<when test="type == 1">
+				and (ft.user_id = #{userId} ) 
+			</when>
+			<otherwise>
+				and (ft.user_id = #{userId}  or ftc.user_id=#{userId})
+			</otherwise>
+		</choose>
+		GROUP BY ftc.id
+		
+		union 
+		
+		select u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,
+		    	if(DATE_FORMAT(ctc.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(ctc.create_time, '%m-%d %H:%i'),DATE_FORMAT(ctc.create_time, '%Y-%m-%d %H:%i'))  time,
+		    	ct.id topicId,ct.content topicContent,cti.url img,pu.nick_name postUserName,
+					ctc.type,ctc.content,2 topicType,
+					ct.title,DATE_FORMAT(ct.start_time, '%Y-%m-%d') startTime,DATE_FORMAT(ct.end_time, '%Y-%m-%d') endTime,r.name routeName,
+					if(ruf.note is null,ru.nick_name,ruf.note) byReplyName,ctc.by_reply_content byReplyContent
+		from companion_topic_comment ctc
+		left join companion_topic ct on ct.id=ctc.companion_topic_id and ct.is_del =0 
+		left join route r on r.id =ct.route_id and r.is_del =0
+		left join companion_topic_image cti on cti.companion_topic_id = ct.id and cti.is_del=0
+		LEFT JOIN user pu on pu.id = ct.user_id and pu.is_del =0
+		LEFT JOIN user u on u.id = ctc.user_id and u.is_del =0
+		left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ctc.user_id and uf.is_del =0
+		LEFT JOIN user ru on ru.id = ctc.by_reply_id and ru.is_del =0
+		left join user_friend ruf on ruf.user_id =#{userId} and ruf.friend_id=ctc.by_reply_id and ruf.is_del =0
+		where ctc.id is not null and ct.id is not null and u.id is not null
+		<choose>
+        	<when test="type == 2">
+        		and (ctc.user_id=#{userId})
+			</when>
+			<when test="type == 1">
+				and (ct.user_id = #{userId} )
+			</when>
+			<otherwise>
+				and (ct.user_id = #{userId} or ctc.user_id=#{userId})
+			</otherwise>
+		</choose>
+		GROUP BY ctc.id
+		order by  time desc
+  </select>
+</mapper>

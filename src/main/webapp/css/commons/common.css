@@ -1,0 +1,61 @@
+
+@CHARSET "UTF-8";
+*{
+	margin:0px;
+	padding:0px;
+	font-family:'Microsoft Yahei',"simsun";
+}
+
+.orderTable tr td{
+	margin:10px;
+	padding:10px;
+}
+
+.orderTable th{
+	margin:20px;
+	padding:20px;
+	font-size:20px;
+}
+
+/* 单元格数据显示缺省 */
+.datagrid-cell
+{padding:6px 4px;overflow: hidden;text-overflow:ellipsis;white-space: nowrap;}  
+/* 图片预览*/
+#picDivCom{
+	 position: absolute;
+	 z-index:9999;
+	 max-width:800px;
+	 font-size:0px;
+	 top:50%;
+	 left:50%;
+	 transform:translate(-50%,-50%);
+-ms-transform:translate(-50%,-50%); 	/* IE 9 */
+-moz-transform:translate(-50%,-50%); 	/* Firefox */
+-webkit-transform:translate(-50%,-50%); /* Safari 和 Chrome */
+-o-transform:translate(-50%,-50%); 	/* Opera */
+}
+#chacha{
+	 position: absolute;
+	 z-index:99991;
+	 display:inline-block;
+	 font-size:30px;
+	 top:-25px;
+	 text-align:center;
+	 line-height:50px;
+	 right:-25px;
+	 color:#000;
+	 width:50px;
+	 height:50px;
+	 cursor:pointer;
+	border-radius:50%;
+}
+#picDivCom>img{
+	width:250px;
+	height:300px;
+}
+#picDivCom>img:not(:nth-of-type(3n)){
+	margin-right:25px;
+}
+#picDivCom>img:not(:last-of-type){
+	margin-right:25px;
+}

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.SysDicMapper">
+
+	<resultMap id="TypeBaseResultMap" type="SysDicType">
+		<id column="id" jdbcType="BIGINT" property="id" />
+		<result column="name" jdbcType="VARCHAR" property="name" />
+		<result column="intro" jdbcType="VARCHAR" property="intro" />
+		<result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+		<result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+		<result column="is_del" jdbcType="BIT" property="isDel" />
+	</resultMap>
+  
+	<resultMap id="DetailBaseResultMap" type="SysDicDetail" autoMapping="true">
+		<id column="id" jdbcType="BIGINT" property="id" />
+		<result column="name" jdbcType="VARCHAR" property="name" />
+		<result column="is_del" jdbcType="BIT" property="isDel" />
+		<result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+		<result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+	</resultMap>
+	
+	<!-- 保存数据字典类型 -->
+	<insert id="saveType" parameterType="SysDicType" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+		insert into sys_dic_type
+		(
+			name,
+			intro,
+			create_time
+		)
+		values(
+			#{name},
+			#{intro},
+			now()
+		)
+	</insert>
+	
+	<!-- 保存数据字典详细 -->
+	<insert id="saveDetail" parameterType="SysDicDetail">
+		insert into sys_dic_detail
+		(
+			name,
+			type_id,
+			identity,
+			create_time
+		)
+		values(
+			#{name},
+			#{type.id},
+			#{identity},
+			now()
+		)
+	</insert>
+	<!-- 修改数据字典类型 -->
+	<update id="updateType" parameterType="SysDicType">
+		update  sys_dic_type
+		<set>
+			<if test="name != null">
+				name=#{name},
+			</if>
+			<if test="intro != null">
+				intro = #{intro},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<select id="countType" parameterType="string" resultType="int">
+		select  count(id) from sys_dic_type
+		where name=#{name}
+	</select>
+  
+  	<!-- 修改数据字典详细 -->
+	<update id="updateDetail" parameterType="SysDicDetail">
+		update  sys_dic_detail
+		set 
+		<set>
+			<if test="name != null">
+				name=#{name},
+			</if>
+			
+			<if test="type != null and type.id != null">
+				type_id=#{type.id}
+			</if>
+			<if test="identity != null">
+				identity = #{identity}
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 修改数据字典详细 -->
+	<update id="deleteTypeById" parameterType="long">
+		update sys_dic_type
+		set 
+			is_del=1
+		where id = #{id}
+	</update>
+	
+	<!-- 修改数据字典详细 -->
+	<update id="deleteDetailById" parameterType="long">
+		update sys_dic_detail
+		set 
+			is_del=1
+		where id = #{id}
+	</update>
+	<!-- 根据类型的名字查找详细 -->
+	<select id="getDetailsByTypeName" parameterType="string" resultMap="DetailBaseResultMap">
+		SELECT
+			d.id,
+			d.`name`,
+			d.identity
+		FROM
+			sys_dic_type t
+		LEFT JOIN sys_dic_detail d ON d.type_id = t.id
+		AND d.is_del = 0
+		WHERE
+			t.`name` = #{name}
+		AND t.is_del = 0
+	</select>
+</mapper>

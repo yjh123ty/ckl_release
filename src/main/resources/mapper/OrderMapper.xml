@@ -1,0 +1,854 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.OrderMapper" >
+	<select id="findOrderCountByUserId" resultType="tech.youmu.ckl.app.vo.OrderCount" >
+  	 	select count(o.id) count,o.status from `order` o 
+		where o.user_id= #{userId} and o.is_del =0
+		GROUP BY o.`status` 
+	</select>
+  
+  	<resultMap type="tech.youmu.ckl.app.vo.OrderInfo" id="orderInfoMap">
+  		<result column="orderId" property="orderId"/>
+  		<result column="productId" property="productId"/>
+  		<result column="stationId" property="stationId"/>
+  		<result column="latitude" property="lat"/>
+  		<result column="longtitude" property="lng"/>
+  		<result column="stationName" property="stationName"/>
+  		<result column="stationCover" property="stationCover"/>
+  		<result column="orderType" property="orderType"/>
+  		<result column="startTime" property="startTime"/>
+  		<result column="endTime" property="endTime"/>
+  		<result column="comboName" property="comboName"/>
+  		<result column="roomType" property="roomType"/>
+  		<result column="totalAmount" property="totalAmount"/>
+  		<result column="status" property="status"/>
+  		<result column="isPayNew" property="isPayNew"/>
+  		<result column="stayPayAmount" property="stayPayAmount"/>
+  		<result column="serviceUserName" property="serviceUserName"/>
+  		<result column="serviceUserJob" property="serviceUserJob"/>
+  		<result column="serviceAvgStar" property="serviceAvgStar"/>
+  		<result column="serviceHeadIcon" property="serviceHeadIcon"/>
+  		<collection property="imgs" javaType="java.util.List" ofType="java.lang.String" >
+         <result column="img" property="img"/> 
+        </collection>
+  	</resultMap>
+	<select id="findOrderInfo" resultMap="orderInfoMap" >
+   		select 
+   			o.id orderId,o.product_id productId,o.station_id stationId,s.name stationName,o.order_type orderType,
+   			DATE_FORMAT(o.start_time, '%Y-%m-%d %H:%i:%S') startTime,DATE_FORMAT(o.end_time, '%Y-%m-%d %H:%i:%S') endTime,
+   			o.combo_name comboName,o.room_type roomType,o.is_pay_new isPayNew,o.stay_pay_amount stayPayAmount,
+   			o.total_amount totalAmount,o.status status,oi.url img,s.latitude,s.longtitude,s.cover stationCover,
+   			e.real_name serviceUserName,e.head_icon serviceHeadIcon,e.avg_star serviceAvgStar,jt.name serviceUserJob
+   		from `order` o 
+   		left join order_image oi on oi.order_id = o.id
+   		left join station s on s.id = o.station_id
+   		left join employee e on e.id = o.emp_id
+   		left join job_title jt on jt.id = e.job_id 
+		<where>
+			 o.is_del =0
+			<if test="userId !=null">
+				and o.user_id = #{userId} 
+			</if>
+			<if test="employeeId !=null">
+				and o.emp_id = #{employeeId}
+			</if>
+			<if test="status !=null">
+				and o.status = #{status}
+			</if>
+		</where> 
+		order by o.create_time desc
+		<if test="startRows !=null and rows !=null">
+		limit #{startRows},#{rows}
+	</if>
+	</select>
+	
+	<resultMap type="tech.youmu.ckl.app.vo.OrderDetailInfo" id="orderDetailInfoMap">
+  		<result column="orderId" property="orderId"/>
+  		<result column="invoiceTitle" property="invoiceTitle"/>
+  		<result column="orderNumber" property="orderNumber"/>
+  		<result column="code" property="code"/>
+  		<result column="status" property="status"/>
+  		<result column="paidAmount" property="paidAmount"/>
+  		<result column="totalAmount" property="totalAmount"/>
+  		<result column="orderType" property="orderType"/>
+  		<result column="createTime" property="createTime"/>
+  		<result column="isPayNew" property="isPayNew"/>
+  		<result column="carType" property="carType"/>
+  		<result column="carPlate" property="carPlate"/>
+  		<result column="stationId" property="stationId"/>
+  		<result column="latitude" property="lat"/>
+  		<result column="longtitude" property="lng"/>
+  		<result column="stationName" property="stationName"/>
+  		<result column="stationCover" property="stationCover"/>
+  		<result column="stationMobile" property="stationMobile"/>
+  		<result column="stationAddress" property="stationAddress"/>
+  		<result column="serviceRemark" property="serviceRemark"/>
+  		<result column="travelDistance" property="travelDistance"/>
+  		<result column="carMarketYear" property="carMarketYear"/>
+  		<result column="carPlateDate" property="carPlateDate"/>
+  		<result column="carCondition" property="carCondition"/>
+  		<result column="serviceAddress" property="serviceAddress"/>
+  		<result column="serviceMobile" property="serviceMobile"/>
+  		<result column="serviceName" property="serviceName"/>
+  		<result column="startTime" property="startTime"/>
+  		<result column="endTime" property="endTime"/>
+  		<result column="stayPayAmount" property="stayPayAmount"/>
+  		<result column="refundAmount" property="refundAmount"/>
+  		<result column="comboName" property="comboName"/>
+  		<result column="comboNumber" property="comboNumber"/>
+  		<result column="comboAmount" property="comboAmount"/>
+  		<result column="openTime" property="openTime"/>
+		<result column="closeTime" property="closeTime"/>
+		<result column="orderTips" property="orderTips"/>
+		<result column="orderRule" property="orderRule"/>
+  		<result column="days" property="days"/>
+  		<result column="roomType" property="roomType"/>
+  		<result column="roomNumber" property="roomNumber"/>
+  		<result column="roomAmount" property="roomAmount"/>
+  		<result column="planTime" property="planTime"/>
+  		<result column="contactName" property="contactName"/>
+  		<result column="contactMobile" property="contactMobile"/>
+  		<result column="serviceUserName" property="serviceUserName"/>
+  		<result column="serviceUserJob" property="serviceUserJob"/>
+  		<result column="serviceAvgStar" property="serviceAvgStar"/>
+  		<result column="serviceHeadIcon" property="serviceHeadIcon"/>
+  		<result column="servicevaluationContent" property="servicevaluationContent"/>
+  		<collection property="orderServiceInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.OrderServiceInfo" >
+        	<result column="serviceInfoId" property="orderServiceId"/> 
+        	<result column="serviceInfoName" property="serviceName"/> 
+        	<result column="productId" property="productId"/> 
+            <result column="serviceInfoPrice" property="servicePrice"/> 
+            <result column="isCarPart" property="isCarPart"/> 
+            <result column="type" property="type"/> 
+            <result column="number" property="number"/> 
+        </collection>
+        
+        <collection property="serviceEvaluationDetailInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.ServiceEvaluationDetailInfo" >
+        	<result column="evaluationName" property="evaluationName"/> 
+            <result column="evaluationStar" property="evaluationStar"/> 
+        </collection>
+  	</resultMap>
+	<select id="getOrderDetailInfo" resultMap="orderDetailInfoMap" >
+   		select 
+   			o.id orderId,o.order_number orderNumber,o.status status,o.code code,o.refund_amount refundAmount,
+   			o.paid_amount paidAmount,o.total_amount totalAmount,o.order_type orderType,
+   			DATE_FORMAT(o.create_time, '%Y-%m-%d %H:%i:%S') createTime,o.is_pay_new isPayNew,
+   			o.car_type carType,o.car_plate carPlate,o.service_remark serviceRemark,
+   			o.travel_distance travelDistance,o.car_market_year carMarketYear,o.car_plate_date carPlateDate,
+   			o.car_condition carCondition,o.service_address serviceAddress,o.service_name serviceName,
+   			o.service_mobile serviceMobile,DATE_FORMAT(o.start_time, '%Y-%m-%d %H:%i:%S') startTime,
+   			DATE_FORMAT(o.end_time, '%Y-%m-%d %H:%i:%S') endTime,o.combo_name comboName,o.combo_number comboNumber,o.combo_amount comboAmount,
+   			DATE_FORMAT(o.open_time, '%H:%i') openTime,DATE_FORMAT(o.close_time, '%H:%i') closeTime,o.order_tips orderTips,o.order_rule orderRule,
+   			o.days days,o.room_type roomType,o.invoice_title invoiceTitle,
+   			o.room_number roomNumber,o.room_amount roomAmount,DATE_FORMAT(o.plan_time, '%Y-%m-%d %H:%i:%S') planTime,o.contact_name contactName,contact_mobile contactMobile,
+   			o.stay_pay_amount stayPayAmount,
+   			e.real_name serviceUserName,e.head_icon serviceHeadIcon,e.avg_star serviceAvgStar,
+   			jt.name serviceUserJob,
+   			osd.id serviceInfoId,osd.product_id productId,osd.is_car_part isCarPart,osd.name serviceInfoName,osd.price serviceInfoPrice,osd.type type,osd.number number,
+   			se.content servicevaluationContent,sed.name evaluationName,sed.star evaluationStar,
+   			o.station_id stationId,s.name stationName,s.mobile stationMobile,CONCAT(s.district_address,s.address) stationAddress,s.latitude,s.longtitude,s.cover stationCover 
+   		from `order` o 
+		LEFT JOIN order_service_detail osd on osd.order_id = o.id
+		left join service_evaluation se on se.order_id = o.id
+		left join service_evaluation_detail sed on sed.order_id = o.id
+		left join employee e on e.id = o.emp_id
+		left join job_title jt on jt.id = e.job_id 
+		left join station s on s.id = o.station_id 
+   		where o.id=#{orderId}
+	</select>
+	
+	
+	<!-- 每个员工完成订单详情记录 -->
+	<resultMap type="OrderInfoHistory" id="orderInfoHistoryMap">
+		<id column="id" property="id"></id>
+		<result column="emp_id" property="empId"/>
+		<result column="num" property="num"/>
+		<result column="total_amount" property="totalAmount"/>
+		<result column="avg_star" property="avgStar"/>
+		<result column="record_month" property="recordMonth"/>
+		<result column="create_time" property="createTime"/>
+		<result column="modify_time" property="modifyTime"/>
+		<result column="is_del" property="isDel"/>
+	</resultMap>
+	
+	<!-- 上个月的员工完成服务情况 -->
+	<insert id="saveOrderInfoHis">
+	insert into history_count_orderinfo (emp_id,num,total_amount,record_month,avg_star,create_time)
+		select 
+			e.id 
+			,case record.num
+				WHEN NULL THEN 0
+				ELSE record.num
+				end as num
+			,record.total_amount
+			,( SELECT  SUBSTR(date_add(curdate(),interval -1 month), 1,7) ) record_month
+			,avgStar.avgstar
+			,now()
+			FROM employee e
+
+			LEFT JOIN 
+			(
+			SELECT 
+			o.emp_id as empId
+			,COUNT(o.id) as num
+			,SUM(o.total_amount) as total_amount
+			from `order` o
+			WHERE o.`status` > 6
+			and o.is_del = 0
+			and o.create_time like concat(SUBSTR(date_add(curdate(),interval -1 month), 1,7),"%")
+			GROUP BY o.emp_id
+			) record on record.empId = e.id
+			LEFT JOIN 
+			(
+			SELECT 
+			o.emp_id as avg_emp_id
+			,ifnull(avg(se.star),3) avgstar
+			FROM service_evaluation se
+			LEFT JOIN `order` o on o.id = se.order_id and se.is_del = 0
+			WHERE se.create_time like concat(SUBSTR(date_add(curdate(),interval -1 month), 1,7),"%")
+			and o.is_del = 0
+			GROUP BY o.emp_id
+			)	avgStar
+			 on record.empId = avgStar.avg_emp_id
+	</insert>
+	
+	<sql id="whereSqlForHistory">
+		<where>
+			<if test="empId !=null">
+				AND info.emp_id = #{empId} 
+			</if>
+			<if test="recordMonth !=null and recordMonth != '' ">
+				AND info.record_month = #{recordMonth} 
+			</if>
+			<if test="stationId !=null">
+				AND s.id = #{stationId} 
+			</if>
+		</where>
+		AND info.is_del = 0
+	</sql>
+	
+	<select id="getOrderInfoHis" resultMap="orderInfoHistoryMap" parameterType="OrderInfoHistoryQuery">
+		select 
+		info.emp_id
+		,info.num
+		,info.total_amount
+		,info.avg_star
+		,info.record_month
+		 from history_count_orderinfo info
+		 <include refid="whereSqlForHistory"></include>
+	</select>
+	
+	<select id="getOrderInfoHisByStationId" resultMap="orderInfoHistoryMap" parameterType="OrderInfoHistoryQuery">
+		select 
+		info.*
+		,s.id sid 
+		,s.name sname
+		from station s
+		LEFT JOIN employee e on e.station_id= s.id and e.is_del = 0
+		left join history_count_orderinfo info on info.emp_id = e.id and info.is_del = 0
+		<include refid="whereSqlForHistory"></include>
+	</select>
+	
+	
+	
+	<!-- 每月服务站完成订单总数历史记录 -->
+	<resultMap type="HistoryStationCountOrderInfo" id="historyStationCountOrderInfoMap">
+		<id column="id" property="id"></id>
+		<result column="station_id" property="stationId"/>
+		<result column="order_num" property="orderNum"/>
+		<result column="total_amount" property="totalAmount"/>
+		<result column="record_month" property="recordMonth"/>
+		<result column="create_time" property="createTime"/>
+		<result column="modify_time" property="modifyTime"/>
+		<result column="is_del" property="isDel"/>
+	</resultMap>
+	
+	<insert id="saveStationOrderInfoHis">
+		insert into history_station_count_orderinfo (station_id,order_num,total_amount,record_month,create_time)
+			SELECT s.id stationId
+			,IFNULL(COUNT(o.id),0) orderNum
+			,IFNULL(SUM(o.total_amount),0) totalAmount 
+			,( SELECT  SUBSTR(date_add(curdate(),interval -1 month), 1,7) ) record_month
+			,now()
+			from station s
+			LEFT JOIN `order` o on o.station_id = s.id AND o.is_del = 0
+			WHERE  s.is_del = 0 AND s.type = 2
+			
+			GROUP BY s.id
+	</insert>
+	
+	<sql id="whereSqlForStationHistory">
+		<where>
+			<if test="stationId!=null">
+				AND station_id = #{stationId} 
+			</if>
+			<if test="recordMonth !=null and recordMonth != '' ">
+				AND record_month = #{recordMonth} 
+			</if>
+			<if test="recordMonth == null or recordMonth == '' ">
+				AND record_month like concat(SUBSTR(date_add(curdate(),interval -1 month), 1,7),"%")
+			</if>
+		</where>
+		AND is_del = 0
+	</sql>
+	
+	<select id="getStationOrderInfoHis" resultMap="historyStationCountOrderInfoMap" parameterType="HistoryStationCountOrderInfoQuery">
+		select 
+		station_id
+		,order_num
+		,record_month
+		 from history_station_count_orderinfo
+		 <include refid="whereSqlForStationHistory"></include>
+	</select>
+	
+	
+	
+	
+	<resultMap id="OrderMap" type="Order" >
+    	<id column="id" property="id"/>
+  		<result column="invoice_title" property="invoiceTitle"/>
+  		<result column="order_number" property="orderNumber"/>
+  		<result column="code" property="code"/>
+  		<result column="user_id" property="userId"/>
+  		<result column="status" property="status"/>
+  		<result column="paid_amount" property="paidAmount"/>
+  		<result column="total_amount" property="totalAmount"/>
+  		<result column="stay_pay_amount" property="stayPayAmount"/>
+  		<result column="refund_amount" property="refundAmount"/>
+  		<result column="is_pay_new" property="isPayNew"/>
+  		<result column="is_refund" property="isRefund"/>
+  		<result column="pay_method" property="payMethod"/>
+  		<result column="car_type" property="carType"/>
+  		<result column="car_plate" property="carPlate"/>
+  		<result column="car_plate_date" property="carPlateDate"/>
+  		<result column="car_condition" property="carCondition"/>
+  		<result column="car_market_year" property="carMarketYear"/>
+  		<result column="travel_distance" property="travelDistance"/>
+  		<result column="service_name" property="serviceName"/>
+  		<result column="service_address" property="serviceAddress"/>
+  		<result column="service_remark" property="serviceRemark"/>
+  		<result column="service_mobile" property="serviceMobile"/>
+  		<result column="combo_name" property="comboName"/>
+  		<result column="days" property="days"/>
+  		<result column="room_type" property="roomType"/>
+  		<result column="room_number" property="roomNumber"/>
+  		<result column="contact_name" property="contactName"/>
+  		<result column="contact_mobile" property="contactMobile"/>
+  		<result column="days" property="days"/>
+  		<result column="start_time" property="startTime"/>
+  		<result column="end_time" property="endTime"/>
+  		
+  		<result column="is_del" property="isDel"/>
+  		<result column="create_time" property="createTime"/>
+  		<result column="modify_time" property="modifyTime"/>
+  		
+  		<result column="sname" property="stationName" />
+  		<result column="stid" property="serviceTypeType" />
+		<result column="stname" property="serviceTypeName" />
+		
+		<result column="stationId" property="stationId" />
+		<result column="emp_id" property="empId"/>
+  		
+  		<!-- 员工 -->
+		<association property="employee" column="emp_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="ename" property="realName" />
+		</association>
+		
+		<!-- 用户 -->
+		<association property="user" column="user_id" javaType="User">
+			<id column="uid" property="id" />
+			<result column="umobile" property="mobile" />
+			<result column="uname" property="nickName" />
+		</association>
+		
+		<!-- 服务站 -->
+		<association property="station" column="station_id" javaType="Station">
+			<id column="sid" property="id" />
+			<result column="sname" property="name" />
+		</association>
+		
+		<!-- 服务类型 -->
+		<association property="serviceType" javaType="ServiceType">
+			<result column="stid" property="type" />
+			<result column="stname" property="name" />
+		</association>
+		
+		
+  </resultMap>
+  
+  
+    <sql id="whereSql">
+	  	<where>
+				<if test="keywords!=null and keywords!=''">
+					(
+						o.order_number like concat('%',#{keywords},'%') 
+						or
+						u.mobile like concat('%',#{keywords},'%') 
+						or 
+						u.nick_name like concat('%',#{keywords},'%')
+						or
+						s.name like concat('%',#{keywords},'%')
+					
+					)
+				</if>
+				<if test="status!=null and status!=-1">
+					AND o.status = #{status} 
+				</if>
+				<if test="serviceTypeId != null and serviceTypeId != 0">
+					AND o.order_type = #{serviceTypeId} 
+				</if>
+				<if test="beginTimeStr != null and beginTimeStr!=''">
+					AND DATE_FORMAT(o.create_time, '%Y-%m-%d') >= #{beginTimeStr}
+				</if>
+				<if test="endTimeStr != null and endTimeStr!=''">
+					AND DATE_FORMAT(o.create_time, '%Y-%m-%d') &lt;= #{endTimeStr}
+				</if>
+				<if test="isPayNew !=null and isPayNew != -1 ">
+					AND o.is_pay_new = #{isPayNew} 
+				</if>
+				<if test="stationId != null">
+					and s.id=#{stationId}
+				</if>
+				<if test="userId != null">
+					and u.id=#{userId}
+				</if>
+				<if test="employeeId != null">
+					and e.id=#{employeeId}
+				</if>
+				AND o.is_del = 0
+		</where>
+    </sql>
+    
+    <!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem == null">
+			order by o.create_time DESC
+		</if>
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="OrderQuery" resultMap="OrderMap">
+		select o.* 
+		,e.id eid
+		,e.real_name ename
+		,u.id uid
+		,u.mobile umobile
+		,u.nick_name uname
+		,s.id sid
+		,s.name sname
+		,st.type stid
+		,st.name stname
+		from `order` o
+			left join employee e
+		on e.id = o.emp_id and e.is_del = 0 
+			left join service_type  st
+		on st.type = o.order_type and st.is_del = 0
+			left join `user` u
+		on u.id = o.user_id and u.is_del = 0
+			left join station s
+		on s.id = o.station_id and s.is_del = 0
+		
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		
+		<if test="pageSize>0 and pageSize > 0" >
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="OrderQuery" resultType="long">
+		select count(o.id)
+		from `order` o
+			left join employee e
+		on e.id = o.emp_id and e.is_del = 0 
+			left join service_type  st
+		on st.type = o.order_type and st.is_del = 0
+			left join `user` u
+		on u.id = o.user_id and u.is_del = 0
+			left join station s
+		on s.id = o.station_id and s.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<!-- 同意退款 -->
+	<update id="refundById" parameterType="long">
+		update `order` 
+		set status=1
+		where id=#{id}
+	</update>
+	
+	<!-- 申请退款 -->
+	<update id="askRefundById" parameterType="long">
+		update `order` 
+		set status=1
+		where id=#{id} and  status = 5
+	</update>
+	
+	<!-- 提交验证码，更改状态为服务中 -->
+	<update id="awaitById" parameterType="long">
+		update `order` 
+		set status = 6
+		where id=#{id} and status = 5
+	</update>
+	
+	<!-- 完成服务，更改状态为待评价 -->
+	<update id="finishById" parameterType="long">
+		update `order` 
+		set status = 7
+		where id=#{id} and status = 6
+	</update>
+	
+	<!-- 根据id获取一条订单明细 -->
+	<select id="getById" parameterType="long" resultMap="OrderMap">
+		select o.* 
+		,e.id eid
+		,e.real_name ename
+		,u.id uid
+		,u.mobile umobile
+		,u.nick_name uname
+		,s.id sid
+		,s.id stationId
+		,s.name sname
+		,st.type stid
+		,st.name stname
+		from `order` o
+			left join employee e
+		on e.id = o.emp_id and e.is_del = 0 
+			left join service_type  st
+		on st.type = o.order_type and st.is_del = 0
+			left join `user` u
+		on u.id = o.user_id and u.is_del = 0
+			left join station s
+		on s.id = o.station_id and s.is_del = 0
+		where o.id=#{id}
+	</select>
+	
+	<!-- 根据id获取一条订单明细 -->
+	<select id="getCodeById" parameterType="long" resultType="String">
+		select o.code
+		from `order` o
+		where o.id=#{id}
+	</select>
+	
+	<update id="updateOrderAmountById" parameterType="Order">
+		update `order` 
+		set
+		 modify_time = now(),
+		 total_amount = #{totalAmount},
+		 stay_pay_amount = #{stayPayAmount},
+		 is_pay_new = #{isPayNew}
+		where #{id} = id
+		
+	</update>
+	
+	
+  <update id="update" >
+    update `order`
+    <set >
+	        modify_time = now(),
+      <if test="orderNumber != null" >
+    	order_number = #{orderNumber},
+   	  </if>
+      <if test="empId != null" >
+        emp_id = #{empId},
+      </if>
+      <if test="stationId != null" >
+        station_id = #{stationId},
+      </if>
+      <if test="userId != null" >
+        user_id = #{userId},
+      </if>
+      <if test="code != null" >
+        code = #{code},
+      </if>
+      <if test="orderType != null" >
+        order_type = #{orderType},
+      </if>
+      <if test="carType != null" >
+        car_type = #{carType},
+      </if>
+      <if test="carPlate != null" >
+        car_plate = #{carPlate},
+      </if>
+      <if test="travelDistance != null" >
+        travel_distance = #{travelDistance},
+      </if>
+      <if test="carMarketYear != null" >
+        car_market_year = #{carMarketYear},
+      </if>
+      <if test="carPlateDate != null" >
+        car_plate_date = #{carPlateDate},
+      </if>
+      <if test="serviceAddress != null" >
+        service_address = #{serviceAddress},
+      </if>
+      <if test="serviceName != null" >
+        service_name = #{serviceName},
+      </if>
+      <if test="serviceMobile != null" >
+        service_mobile = #{serviceMobile},
+      </if>
+      <if test="serviceRemark != null" >
+        service_remark = #{serviceRemark},
+      </if>
+      <if test="carCondition != null" >
+        car_condition = #{carCondition},
+      </if>
+      <if test="startTime != null" >
+        start_time = #{startTime},
+      </if>
+      <if test="endTime != null" >
+        end_time = #{endTime},
+      </if>
+      <if test="comboName != null" >
+        combo_name = #{comboName},
+      </if>
+      <if test="comboNumber != null" >
+        combo_number = #{comboNumber},
+      </if>
+       <if test="comboAmount != null" >
+        combo_amount = #{comboAmount},
+      </if>
+      
+      <if test="days != null" >
+        days = #{days},
+      </if>
+      <if test="roomType != null" >
+        room_type = #{roomType},
+      </if>
+      <if test="roomNumber != null" >
+        room_number = #{roomNumber},
+      </if>
+      <if test="roomAmount != null" >
+        room_amount = #{roomAmount},
+      </if>
+      <if test="planTime != null" >
+        plan_time = #{planTime},
+      </if>
+      <if test="contactName != null" >
+        contact_name = #{contactName},
+      </if>
+      <if test="contactMobile != null" >
+        contact_mobile = #{contactMobile},
+      </if>
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="payMethod != null" >
+        pay_method = #{payMethod},
+      </if>
+      <if test="isPayNew != null" >
+        is_pay_new = #{isPayNew},
+      </if>
+        <if test="isRefund != null" >
+        is_refund = #{isRefund},
+      </if>
+      <if test="refundAmount != null" >
+        refund_amount = #{refundAmount},
+      </if>
+      <if test="totalAmount != null" >
+        total_amount = #{totalAmount},
+      </if>
+      <if test="paidAmount != null" >
+        paid_amount = #{paidAmount},
+      </if>
+      <if test="stayPayAmount != null" >
+        stay_pay_amount = #{stayPayAmount},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+      <if test="createTime != null" >
+        create_time = #{createTime}
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+	
+  <insert id="save" keyProperty="id" useGeneratedKeys="true">
+    insert into `order` (invoice_title,product_id,order_number,
+      station_id, user_id, code, 
+      order_type, car_type, car_plate, 
+      travel_distance, car_market_year, car_plate_date, 
+      service_address, service_name, service_mobile, 
+      service_remark, car_condition, start_time, 
+      end_time, combo_name,combo_number,combo_amount,
+      open_time, close_time, order_tips, order_sweet,
+      order_rule, days, 
+      room_type, room_number,room_amount, plan_time, 
+      contact_name, contact_mobile, status, 
+       is_pay_new, total_amount, 
+      paid_amount, stay_pay_amount,refund_amount, is_del, 
+      create_time)
+    values (#{invoiceTitle},#{productId},#{orderNumber}, 
+      #{stationId}, #{userId}, #{code}, 
+      #{orderType}, #{carType}, #{carPlate}, 
+      #{travelDistance}, #{carMarketYear}, #{carPlateDate}, 
+      #{serviceAddress}, #{serviceName}, #{serviceMobile}, 
+      #{serviceRemark}, #{carCondition}, #{startTime}, 
+      #{endTime}, #{comboName}, #{comboNumber},#{comboAmount},
+      #{openTime}, #{closeTime}, #{orderTips},  #{orderSweet},
+      #{orderRule}, #{days}, 
+      #{roomType}, #{roomNumber}, #{roomAmount},#{planTime}, 
+      #{contactName}, #{contactMobile}, #{status}, 
+       0, #{totalAmount},0,0,0,0,now())
+  </insert>
+  
+  <select id="findCode" resultType="java.lang.String">
+  	select code from `order`
+  </select>
+  
+  
+  <insert id="saveOrderImg">
+    insert into order_image (url, order_id, 
+      is_del, create_time
+      )
+    values ( #{url}, #{orderId}, 
+      0,now()
+      )
+  </insert>
+  
+  <insert id="batchSaveOrderImg">
+    insert into order_image (url, order_id, 
+      is_del, create_time
+      )values  
+    <foreach collection="pics" item="item" index="index" separator=",">
+        (#{item},#{orderId},0,now())
+    </foreach>
+  </insert>
+  
+  
+  <select id="getOrderByCode" resultType="tech.youmu.ckl.domain.Order">
+  	select id,emp_id empId,status,order_type orderType from `order`
+  	where code=#{code} and is_del = 0
+  </select>
+  
+  <sql id="refundOrderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+		
+		<if test="sortItem == null">
+			order by o.`status` DESC
+		</if>
+	</sql>
+	
+	<sql id="refundOrdersWhereSql">
+		<where>
+			<if test="keywords!=null and keywords!=''">
+				(
+				o.order_number like concat('%',#{keywords},'%')
+				or
+				u.mobile like concat('%',#{keywords},'%')
+				or
+				u.nick_name like concat('%',#{keywords},'%')
+				or
+				s.name like concat('%',#{keywords},'%')
+
+				)
+			</if>
+			<if test="serviceTypeId != null and serviceTypeId != 0">
+				AND o.order_type = #{serviceTypeId}
+			</if>
+			<if test="beginTimeStr != null and beginTimeStr!=''">
+				AND DATE_FORMAT(o.create_time, '%Y-%m-%d') >= #{beginTimeStr}
+			</if>
+			<if test="endTimeStr != null and endTimeStr!=''">
+				AND DATE_FORMAT(o.create_time, '%Y-%m-%d') &lt;= #{endTimeStr}
+			</if>
+			<if test="isPayNew !=null and isPayNew != -1 ">
+				AND o.is_pay_new = #{isPayNew}
+			</if>
+			<if test="stationId != null">
+				and s.id=#{stationId}
+			</if>
+			<if test="userId != null">
+				and u.id=#{userId}
+			</if>
+			<if test="employeeId != null">
+				and e.id=#{employeeId}
+			</if>
+			AND o.is_del = 0 AND (o.`status` = 1 or o.`status` = 2)
+		</where>
+	</sql>
+
+	<!-- 分页+高级查询 -->
+	<select id="getRefundOrdersByQuery" parameterType="OrderQuery" resultMap="OrderMap">
+		select o.*
+		,e.id eid
+		,e.real_name ename
+		,u.id uid
+		,u.mobile umobile
+		,u.nick_name uname
+		,s.id sid
+		,s.name sname
+		,st.type stid
+		,st.name stname
+		from `order` o
+		left join employee e
+		on e.id = o.emp_id and e.is_del = 0
+		left join service_type st
+		on st.type = o.order_type and st.is_del = 0
+		left join `user` u
+		on u.id = o.user_id and u.is_del = 0
+		left join station s
+		on s.id = o.station_id and s.is_del = 0
+
+		<include refid="refundOrdersWhereSql"></include>
+		<include refid="refundOrderSql" />
+
+		<if test="pageSize>0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<select id="getRefundOrdersCountByQuery" parameterType="OrderQuery"
+		resultType="long">
+		select count(o.id)
+		from `order` o
+		left join employee e
+		on e.id = o.emp_id and e.is_del = 0
+		left join service_type st
+		on st.type = o.order_type and st.is_del = 0
+		left join `user` u
+		on u.id = o.user_id and u.is_del = 0
+		left join station s
+		on s.id = o.station_id and s.is_del = 0
+		<include refid="refundOrdersWhereSql"></include>
+	</select>
+	
+	<select id="findOrderByStatus" resultType="tech.youmu.ckl.domain.Order">
+  	select id,create_time createTime,modify_time modifyTime from `order`
+  	where status=#{status} and is_del=0
+  </select>
+  
+  <update id="batchCanelOverdueOrder">
+		update `order` 
+		set status=3
+		where status=4 and id in
+		<foreach collection="list" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+	</update>
+	
+	<update id="batchSetDefaultEvaluationOrder">
+		update `order` 
+		set status=8
+		where status=7 and id in
+		<foreach collection="list" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+	</update>
+	
+</mapper>

@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.StationMapper">
+  <resultMap id="BaseResultMap" type="Station" autoMapping="true">
+  	<id column="id" property="id"/>
+    <result column="district_address" jdbcType="BIT" property="districtAddress" />
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+    <association property="district"  javaType="District" select="tech.youmu.ckl.mapper.AddressMapper.getDistrict" column="district_code">
+    </association>
+    <collection property="imgs" ofType="java.lang.String">
+    	<result column="iurl"/>
+    </collection>
+     <collection property="serviceTypes" ofType="ServiceType">
+     	<id column="stid" jdbcType="BIGINT" property="id" />
+    	<result column="stname" jdbcType="VARCHAR" property="name" />
+    	<result column="sttype" jdbcType="INTEGER" property="type" />
+    </collection>
+  </resultMap>
+  
+  <sql id="saveSql">
+  		insert into station 
+	  	(
+			name,
+			district_address,
+			address,
+			latitude,
+			longtitude,
+			intro,
+			stars,
+			type,
+			mobile,
+			district_code,
+			create_time
+	  	)
+	  	values(
+	  		#{name},
+	  		#{districtAddress},
+			#{address},
+			#{latitude},
+			#{longtitude},
+			#{intro},
+			#{stars},
+			2,
+			#{mobile},
+			#{district.code},
+			now()
+	  	)
+  </sql>
+  
+  <!-- 添加一个服务站的主体信息 -->
+  <insert id="save" parameterType="Station">
+	  <include refid="saveSql"></include>
+  </insert>
+  
+  <insert id="saveImgsUrls">
+	  insert into station_images 
+	 (station_id, url, create_time)
+	 values
+	 <foreach collection="list" item="item" separator=",">
+	 	(#{stationId}, #{item}, now())
+	 </foreach>
+  </insert>
+  
+  <update id="deleteImgsUrlsByStationId" parameterType="long">
+	 update station_images 
+	 set is_del = 1
+	 where id = #{id}
+  </update>
+  
+  <!-- 添加一个服务站的主体信息 -->
+  <update id="updateById" parameterType="Station">
+	  <!-- 没有插入的有 is_del 默认为 false status 默认为 0 打开  stars 在代码里有默认值为 1-->
+	  	update station 
+	  	<set>
+	  		<if test="name != null">
+				name=#{name},
+			</if>
+			<if test="address != null">
+				address=#{address},
+			</if>
+			<if test="status != null">
+				status=#{status},
+			</if>
+			<if test="latitude != null">
+				latitude=#{latitude},
+			</if>
+			<if test="longtitude != null">
+				longtitude=#{longtitude},
+			</if>
+			<if test="intro != null">
+				intro=#{intro},
+			</if>
+			<if test="stars != null">
+				stars=#{stars},
+			</if>
+			<if test="type != null">
+				type=#{type},
+			</if>
+			<if test="mobile != null">
+				mobile=#{mobile},
+			</if>
+			<if test="district != null and district.code != null">
+				district_code=#{district.code},
+			</if>
+			<if test="districtAddress != null">
+				district_address=#{districtAddress}
+			</if>
+		</set>
+		where id = #{id}
+  </update>
+  
+  <!-- 添加一个服务站的主体信息 -->
+  <insert id="saveAndGetId" parameterType="Station" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+	  	<include refid="saveSql"></include>
+  </insert>
+  
+  <!-- 添加一个服务站和服务站类型之间的关联关系-->
+  <insert id="saveStationServiceTypes" parameterType="Station">
+	  	insert into station_service
+	  	(
+			station_id,
+			service_type,
+			create_time
+	  	)
+	  	values
+	  	<foreach collection="serviceTypes" item="serviceType" separator=",">
+	  		<if test="serviceType != null and serviceType.type != null">
+	  			(#{id},#{serviceType.type},now())
+	  		</if>
+	  	</foreach>
+  </insert>
+  
+    <!-- 删除站点和服务类型之间的关联关系 -->
+  <delete id="deleteStationServiceTypes" parameterType="long">
+  	delete from station_service where station_id = #{id}
+  </delete>
+  
+  <!-- 改变站点的状态 -->
+  <update id="changeStatus" parameterType="Station">
+  	update station 
+  		set 
+  			status = #{status}
+  		where id = #{id}
+  </update>
+  
+  
+  <!-- 获取查询的列表 -->
+	<select id="getById" parameterType="long" resultMap="BaseResultMap">
+		select s.*,
+			st.id stid,
+			st.name stname,
+			st.type sttype,
+			i.url iurl
+		from station s
+			left join station_service ss
+			on ss.station_id = s.id and ss.is_del = 0
+			left join service_type st
+			on st.type = ss.service_type and st.is_del = 0
+			left join station_images i on i.station_id = s.id and i.is_del = 0
+		where s.id=#{id}
+	</select>
+  	
+    <!-- 分页sql -->
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- 根据查询对象生成的查询sql -->
+	<sql id="whereSql">
+		<where>
+			<if test="status != null">
+				and s.status = #{status}
+			</if>
+			<if test="startTime != null">
+				and s.create_time &gt; #{startTime}
+			</if>
+			<if test="endTime != null">
+				and s.create_time &lt; #{endTime}
+			</if>
+			<if test="keyword != null">
+				and s.name like concat('%', #{keyword}, '%')
+			</if>
+			and s.is_del = 0 and type = 2
+		</where>
+	</sql>
+	
+	<!-- 获取所有的服务站 -->
+	<select id="getAll"  resultType="Station">
+		SELECT
+			id,
+			name,
+			cover,
+			district_address AS districtAddress,
+			district_code AS districtCode,
+			address,
+			status,
+			latitude,
+			longtitude,
+			intro,
+			stars,
+			type,
+			mobile
+		FROM
+			station s
+		WHERE
+			s.is_del = 0
+		AND type = 2
+	</select>
+	
+	<!-- 获取分页的条数 -->
+	<select id="getCountByQuery" parameterType="StationQuery" resultType="long">
+		select count(s.id) 
+		from station s
+		<include refid="whereSql" />
+	</select>
+	
+	<!-- 获取查询的列表 -->
+	<select id="getByQuery" parameterType="StationQuery" resultMap="BaseResultMap">
+		select s.*,
+		st.id stid,
+		st.name stname,
+		st.type sttype,
+		i.url iurl
+		from (	
+			select * from station s
+			<include refid="whereSql" />
+			<include refid="pageSql" />
+		) s
+		left join station_service ss
+		on ss.station_id = s.id and ss.is_del = 0
+		left join service_type st
+		on st.type = ss.service_type and st.is_del = 0
+		left join station_images i on i.station_id = s.id and i.is_del = 0
+		order by s.create_time desc
+	</select>
+	
+	
+	 <resultMap id="SimpleResultMap" type="Station" autoMapping="true">
+	 	<id column="id" property="id"/>
+	    <association property="district"  javaType="District">
+	    	<id column="dcode" property="code"/>
+	    	<result column="dname" property="name"/>
+	    	<association property="city" javaType="City">
+	    		<id column="ccode" property="code"/>
+	    		<result column="cname" property="name"/>
+    			<association property="province" javaType="Province">
+		    		<id column="pcode" property="code"/>
+		    		<result column="pname" property="name"/>
+	    		</association>
+	    	</association>
+	    </association>
+   	</resultMap>
+	
+	<!-- 获取查询的列表 -->
+	<select id="getHasHotelStations" resultMap="SimpleResultMap">
+		select 
+			s.id,
+			s.name,
+			s.latitude,
+			s.longtitude,
+			d.code dcode,
+			d.name dname,
+			c.code ccode,
+			c.name cname,
+			p.code pcode,
+			p.name pname
+		from station s
+		left join station_service ss
+		on ss.station_id = s.id and ss.is_del = 0
+		left join district d on d.code = s.district_code
+		left join city c on d.up_code = c.code
+		left join province p on c.up_code = p.code
+		where ss.service_type = 1 and s.is_del = 0 and s.type =2
+	</select>
+	
+	<select id="getHasRestaurantStations" resultMap="SimpleResultMap">
+		select 
+			s.id,
+			s.name,
+			s.latitude,
+			s.longtitude,
+			d.code dcode,
+			d.name dname,
+			c.code ccode,
+			c.name cname,
+			p.code pcode,
+			p.name pname
+		from station s
+		left join station_service ss
+		on ss.station_id = s.id and ss.is_del = 0
+		left join district d on d.code = s.district_code
+		left join city c on d.up_code = c.code
+		left join province p on c.up_code = p.code
+		where ss.service_type = 2 and s.is_del = 0 and s.type = 2
+	</select>
+	
+	<select id="getServiceTypesByStationId" parameterType="long"  resultType="ServiceType">
+		select distinct st.id id, st.name name, st.type type, st.start_price as startPrice, st.mil_price as milPrice
+		from station s
+		left join station_service ss
+		on ss.station_id = s.id and ss.is_del = 0
+		left join service_type st
+		on st.type = ss.service_type and st.is_del = 0
+		where s.id =#{id} and s.type = 2
+		order by st.type
+	</select>
+	
+	<resultMap type="Hotel" id="HotelResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="total_room_num" property="totalRoomNum"/>
+		<result column="district_code" property="districtCode"/>
+		<result column="district_address" property="districtAddress"/>
+		<result column="is_del" property="isDel"/>
+		<result column="create_time" property="createTime"/>
+		
+		<association property="station" javaType="Station">
+			<id column="sid" property="id"/>
+			<id column="sname" property="name"/>
+		</association>
+		<collection property="serviceContents" ofType="SysDicDetail">
+			<id column="hcfcontent_id" property="id"/>
+			<result column="hcfname" property="name"/>
+		</collection>
+		
+		<collection property="outsideImgs" ofType="java.lang.String">
+		    	<result column="outurl"/>
+		</collection>
+		
+	    <collection property="innerImgs" ofType="java.lang.String">
+		    	<result column="inurl"/>
+		</collection>
+		
+		<collection property="hotelRooms" ofType="HotelRoom">
+			<id column="hrid" property="id"/>
+			<result column="hrname" property="name"/>
+			<result column="hrprice" property="price"/>
+			<result column="hrbed_type_name" property="bedTypeName"/>
+			<result column="hrtotal_num" property="totalNum"/>
+			<result column="hrsize" property="size"/>
+			<result column="hrcover" property="cover"/>
+			<collection property="imgs" ofType="java.lang.String">
+				<result column="roomurl" property="imgs"/>
+			</collection>
+		</collection>
+	</resultMap>
+	
+	<!-- 将图片的查询使用懒加载的方式实现 -->
+	<select id="getStationHotels" parameterType="long"  resultMap="HotelResultMap">
+		select
+			h.id,
+			h.name,
+			s.district_address as district_address,
+			h.address,
+			h.mobile,
+			h.intro,
+			h.stars,
+			h.minimun,
+			s.id sid,
+			s.name sname,
+			hcf.content_id hcfcontent_id,
+			hcf.name hcfname,
+			hr.id hrid ,
+			hr.cover hrcover ,
+			hr.name hrname ,
+			hr.price hrprice ,
+			hr.bed_type_name hrbed_type_name ,
+			hr.total_num hrtotal_num ,
+			hr.size hrsize,
+			hii.url inurl,
+			hoi.url outurl,
+			hri.url roomurl
+		from hotel h
+		left join hotel_inner_images hii on hii.hotel_id = h.id and hii.is_del = 0
+		left join hotel_outside_images hoi on hoi.hotel_id = h.id and hoi.is_del=0
+		left join station s on s.id = h.station_id and s.is_del = 0
+		left join hotel_content_ref hcf on hcf.hotel_id = h.id and hcf.is_del = 0
+		left join hotel_room hr on hr.hotel_id = h.id and hr.is_del = 0
+		left join hotel_room_images hri on hri.hotel_room_id = hr.id and hri.is_del = 0
+		where h.type = 1 and h.is_del = 0 and h.station_id = #{id}
+	</select>
+	
+	<resultMap type="Restaurant" id="RestaurantResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="district_code" property="districtCode"/>
+		<result column="district_address" property="districtAddress"/>
+		<result column="order_sweet" property="orderSweet"/>
+		<result column="open_time" property="openTime"/>
+		<result column="close_time" property="closeTime"/>
+		<result column="order_tips" property="orderTips"/>
+		<result column="order_rule" property="orderRule"/>
+		<result column="create_time" property="createTime"/>
+		<result column="type" property="type"/>
+		
+		<result column="is_del" property="isDel"/>
+		<collection property="imgs" ofType="java.lang.String">
+		    	<result column="iurl"/>
+		</collection>
+		<collection property="restaurantCombos" ofType="RestaurantCombo">
+			<id column="rcid" property="id"/>
+			<id column="rcname" property="name"/>
+			<id column="rcprice" property="price"/>
+			<id column="rcimg" property="img"/>
+		    <result column="rcstart_time" property="startTime" />
+		    <result column="rcend_time" property="endTime" />
+		    <result column="rcdetail" property="detail" />
+		</collection>
+	</resultMap>
+	
+	<select id="getStationRestaurants" parameterType="long"  resultMap="RestaurantResultMap">
+		select 
+			r.id,
+			r.name ,
+			r.station_id ,
+			s.district_address as district_address ,
+			r.district_code ,
+			r.address ,
+			r.mobile ,
+			r.intro ,
+			r.stars ,
+			r.status ,
+			r.open_time ,
+			r.close_time ,
+			r.order_tips ,
+			r.order_rule ,
+			r.minimun,
+			i.url iurl,
+			rc.id rcid,
+			rc.name rcname,
+			rc.price rcprice,
+			rc.img  rcimg,
+			rc.start_time rcstart_time,
+			rc.end_time rcend_time,
+			rc.detail rcdetail
+		from restaurant r
+		left join restaurant_combo rc on rc.restaurant_id = r.id and rc.is_del = 0
+		left join restaurant_images i on r.id = i.restaurant_id and i.is_del = 0
+		left join station s on s.id = r.station_id and s.is_del = 0 
+		where r.is_del = 0  and r.type = 1 and r.station_id = #{id}
+	</select>
+	
+	
+	<!-- 查询用户收藏的站点的数量 -->
+	<select id="getCollectStationCountByUserId" resultType="java.lang.Integer">
+		select
+		count(ucs.id)
+		from user_collect_station ucs 
+		where ucs.user_id = #{userId} and ucs.is_del =0
+	</select>
+	<select id="findCollectStationInfo" resultType="tech.youmu.ckl.app.vo.CollectStationInfo"  >
+	    select 
+	    	s.id stationId,s.name stationName,s.stars stationStars
+	    from user_collect_station ucs
+	    left join station s on s.id = ucs.station_id 
+	    where ucs.user_id = #{userId} and ucs.is_del =0 and s.is_del=0
+	 </select>
+	 
+	 <select id="isCollectStation" resultType="java.lang.Boolean"  >
+	    select 
+	    	if(count(ucs.id)=0,0,1)
+	    from user_collect_station ucs
+	    where ucs.user_id = #{userId} and ucs.station_id = #{stationId} and ucs.is_del =0 
+	 </select>
+	 
+	<insert id="collectStation" >
+	    insert into user_collect_station (user_id, station_id,is_del, create_time)
+	    values ( #{userId}, #{stationId},0,now())
+	 </insert>
+	 
+	<update id="cancelCollectStation" >
+	    update user_collect_station set is_del = 1
+		where user_id = #{userId} and station_id =#{stationId}
+    </update>
+    
+    
+   <select id="findRouteStationByRouteId"  resultType="tech.youmu.ckl.domain.Station">
+    select 
+    	s.id,s.name ,s.type ,s.longtitude ,s.latitude,trsr.`order`
+    from station s
+    left join template_route_station_ref trsr on trsr.station_id = s.id and trsr.is_del = 0
+	LEFT JOIN route r on r.template_id = trsr.template_route_id and r.is_del=0
+	where r.id =#{routeId} and s.is_del=0
+	ORDER BY trsr.order
+  </select>
+  
+   <select id="findCurrentRouteStationByUserId"  resultType="tech.youmu.ckl.domain.Station">
+    select 
+    	s.id,s.name ,s.type ,s.longtitude ,s.latitude 
+    from station s
+    left join template_route_station_ref trsr on trsr.station_id = s.id and trsr.is_del = 0
+    LEFT JOIN template_route tr on tr.id = trsr.template_route_id and tr.is_del =0
+	LEFT JOIN route r on r.template_id = tr.id and r.is_del=0
+	LEFT JOIN user_route ur on ur.route_id = r.id and ur.status = 1 and ur.is_del=0
+	where ur.user_id =#{userId} and s.is_del=0
+	ORDER BY trsr.order
+  </select>
+  
+  
+  <resultMap type="tech.youmu.ckl.app.vo.StationDetailInfo" id="stationDetailInfoMap">
+		<id column="stationId" property="stationId"/>
+		<result column="stationName" property="stationName"/>
+		<result column="address" property="address"/>
+		<result column="mobile" property="mobile"/>
+		<result column="stars" property="stars"/>
+		<result column="longtitude" property="lng"/>
+		<result column="latitude" property="lat"/>
+		<result column="introduce" property="introduce"/>
+		<result column="stationCoverImg" property="stationCoverImg"/>
+		<result column="type" property="type"/>
+		<collection property="stationImgs" ofType="java.lang.String">
+    		<result column="url" />
+    	</collection>
+    	<collection property="serviceInfos" ofType="tech.youmu.ckl.app.vo.StationServiceInfo">
+		    <result column="serviceStationId" property="stationId" />
+		    <result column="serviceType" property="serviceType" />
+	    </collection>
+	</resultMap>
+	
+  <select id="getStationDetailInfo" resultMap="stationDetailInfoMap">
+		SELECT
+			s.id stationId,
+			s.name stationName,
+			CONCAT(s.district_address,s.address) address,
+			s.mobile,
+			s.stars,
+			s.longtitude ,
+			s.latitude,
+			s.intro introduce,
+			s.cover stationCoverImg,
+			s.type,
+			si.url,
+			ss.station_id serviceStationId,
+			ss.service_type serviceType
+		FROM
+			station s
+		LEFT JOIN station_service ss ON ss.station_id = s.id AND ss.is_del = 0
+		LEFT JOIN station_images si ON si.station_id = s.id AND si.is_del = 0
+		WHERE s.id = #{stationId} AND s.is_del = 0
+	</select>
+	
+  <select id="findHasDeoptServiceStations" resultType="Station">
+		SELECT
+			id,
+			NAME
+		FROM
+			station s
+		WHERE
+		s.id IN (
+			SELECT
+				station_id
+			FROM
+				car_part_depot
+			WHERE
+				is_del = 0
+		)
+		AND s.is_del = 0
+	</select>
+	
+	<select id="getRepeatConut" parameterType="Station" resultType="int">
+		select count(id) from station
+		where name = #{name} and is_del = 0 and type = 2
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+</mapper>

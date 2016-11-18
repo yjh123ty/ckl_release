@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.RestaurantMapper">
+<resultMap type="Restaurant" id="BaseResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="district_code" property="districtCode"/>
+		<result column="district_address" property="districtAddress"/>
+		<result column="order_sweet" property="orderSweet"/>
+		<result column="open_time" property="openTime"/>
+		<result column="close_time" property="closeTime"/>
+		<result column="order_tips" property="orderTips"/>
+		<result column="order_rule" property="orderRule"/>
+		<result column="create_time" property="createTime"/>
+		<result column="type" property="type"/>
+		<result column="cover" property="cover"/>
+		
+		<result column="is_del" property="isDel"/>
+		<association property="station" javaType="Station">
+			<id column="sid" property="id"/>
+			<result column="sname" property="name"/>
+		</association>
+		
+		<collection property="restaurantCombos" ofType="RestaurantCombo">
+			<id column="rcid" property="id"/>
+			<result column="rcname" property="name"/>
+		</collection>
+		
+		<collection property="imgs" ofType="java.lang.String">
+		    	<result column="outurl"/>
+		</collection>
+</resultMap>
+  
+  <sql id="saveSql">
+	insert into restaurant
+	(
+		name ,
+		station_id ,
+		district_address ,
+		district_code ,
+		address ,
+		mobile ,
+		intro ,
+		stars ,
+		latitude,
+    	longtitude,
+		open_time ,
+		close_time ,
+		order_tips ,
+		order_rule ,
+		order_sweet ,
+		minimun,
+		type,
+		cover,
+		create_time
+	)
+	values(
+		#{name },
+		#{station.id },
+		#{districtAddress},
+		#{districtCode },
+		#{address },
+		#{mobile },
+		#{intro },
+		#{stars },
+		#{latitude},
+    	#{longtitude},
+		#{openTime },
+		#{closeTime },
+		#{orderTips },
+		#{orderRule },
+		#{orderSweet},
+		#{minimun},
+		#{type},
+		#{cover},
+		now()
+	)
+  </sql>
+  
+  
+  <insert id="save" parameterType="Restaurant">
+	  <include refid="saveSql"></include>
+  </insert>
+  
+  <insert id="saveAndGetId" parameterType="Restaurant" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+	  <include refid="saveSql"></include>
+  </insert>
+  
+   <insert id="saveImgUrls">
+	 insert into restaurant_images 
+	 (restaurant_id, url, create_time)
+	 values
+	 <foreach collection="list" item="item" separator=",">
+	 	(#{restaurantId}, #{item}, now())
+	 </foreach>
+  </insert>
+  
+  <update id="deleteImgUrlsByRestaurantId" parameterType="long">
+	 update  restaurant_images 
+	 set is_del = 1
+	 where restaurant_id = #{id}
+  </update>
+  
+  <update id="updateById" parameterType="Restaurant">
+  	update restaurant
+	  	<set>
+	  		<if test="name != null">
+	  			name = #{name},
+	  		</if>
+	  		<if test="station != null and station.id != null">
+	  			station_id = #{station.id},
+	  		</if>
+	  		<if test="address != null">
+	  			address = #{address},
+	  		</if>
+	  		<if test="districtAddress != null">
+	  			district_address = #{districtAddress},
+	  		</if>
+	  		<if test="districtCode != null">
+	  			district_code = #{districtCode},
+	  		</if>
+	  		<if test="mobile != null">
+	  			mobile = #{mobile},
+	  		</if>
+	  		<if test="intro != null">
+	  			intro = #{intro},
+	  		</if>
+	  		<if test="stars != null">
+	  			stars = #{stars},
+	  		</if>
+	  		<if test="openTime != null">
+	  			open_time = #{openTime},
+	  		</if>
+	  		<if test="closeTime != null">
+	  			close_time = #{closeTime},
+	  		</if>
+	  		<if test="orderTips != null">
+	  			order_tips = #{orderTips},
+	  		</if>
+	  		<if test="orderRule != null">
+	  			order_rule = #{orderRule},
+	  		</if>
+	  		<if test="latitude != null">
+	  			latitude = #{latitude},
+	  		</if>
+	  		<if test="longtitude != null">
+	  			longtitude = #{longtitude},
+	  		</if>
+	  		<if test="minimun != null">
+	  			minimun = #{minimun},
+	  		</if>
+	  		<if test="minimun != null">
+	  			minimun = #{minimun},
+	  		</if>
+	  		<if test="type != null">
+	  			type = #{type},
+	  		</if>
+	  		<if test="cover != null">
+	  			cover = #{cover},
+	  		</if>
+	  		<if test="orderSweet != null">
+	  			order_sweet = #{orderSweet}
+	  		</if>
+		</set>
+		where id = #{id}
+  </update>
+  
+  <sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+  </sql>
+  
+  <sql id="whereSql">
+		<where>
+			<if test="stars != null">
+				and r.stars = #{stars}
+			</if>
+			<if test="type != null">
+				and r.type = #{type}
+			</if>
+			<if test="keyword != null">
+				and
+				(
+					r.name like concat('%',#{keyword},'%')
+					or
+					s.name like concat('%',#{keyword},'%')
+				)
+			</if>
+			and r.is_del = 0
+		</where>
+  </sql>
+	
+  <select id="getCountByQuery" parameterType="RestaurantQuery" resultType="long">
+		select 
+				count(distinct r.id)
+			from restaurant r 
+			left join station s on s.id = r.station_id and s.is_del = 0
+			<include refid="whereSql" />
+  </select>
+  
+  <select id="getByQuery" parameterType="RestaurantQuery" resultMap="BaseResultMap">
+		select 
+				r.*,
+				rc.id rcid,
+				rc.name rcname
+			from (
+				select 
+				r.id,
+				r.name ,
+				r.station_id ,
+				if(r.type=1, s.district_address, r.district_address) as district_address ,
+				r.district_code ,
+				r.address ,
+				r.mobile ,
+				r.intro ,
+				r.stars ,
+				r.status ,
+				r.open_time ,
+				r.close_time ,
+				r.order_tips ,
+				r.order_rule ,
+				r.create_time,
+				r.cover,
+				roi.url outurl,
+				s.id sid,
+				s.name sname
+				from restaurant r
+				left join station s on s.id = r.station_id and s.is_del = 0
+				left join restaurant_images roi on roi.restaurant_id = r.id and roi.is_del=0
+				<include refid="whereSql"/>
+				<include refid="pageSql"/>
+			) r
+			left join restaurant_combo rc on rc.restaurant_id = r.id and rc.is_del = 0
+			order by r.create_time desc
+	</select>
+	
+	<select id="getById" parameterType="long" resultMap="BaseResultMap">
+		select 
+				r.id,
+				r.name ,
+				r.station_id ,
+				if(r.type=1, s.district_address, r.district_address) as district_address ,
+				r.district_code ,
+				r.address ,
+				r.mobile ,
+				r.intro ,
+				r.stars ,
+				r.cover,
+				r.open_time ,
+				r.close_time ,
+				r.order_tips ,
+				r.order_rule ,
+				r.order_sweet,
+				r.minimun,
+				r.latitude,
+				r.longtitude,
+				r.type,
+				r.status,
+				r.create_time,
+				s.id sid,
+				s.name sname,
+				rc.id rcid,
+				rc.name rcname,
+				roi.url outurl
+				
+			from restaurant r 
+			left join station s on s.id = r.station_id and s.is_del = 0
+			left join restaurant_combo rc on rc.restaurant_id = r.id and rc.is_del = 0
+			left join restaurant_images roi on roi.restaurant_id = r.id and roi.is_del=0
+		where r.id=#{id}
+	</select>
+	
+	<select id="findRestaurantsSimpleInfo" resultType="Restaurant">
+		select 
+				r.id,
+				r.name
+			from restaurant r 
+			where r.is_del = 0 and status = 0 and type =1
+	</select>
+	
+	<select id="getRestaurantById" resultType="tech.youmu.ckl.domain.Restaurant">
+		select 
+				r.id,
+				r.name ,
+				r.station_id  stationId,
+				if(r.type=1, s.district_address, r.district_address) as districtAddress,
+				r.district_code districtCode,
+				r.address address ,
+				r.mobile ,
+				r.intro ,
+				r.stars ,
+				r.minimun ,
+				r.open_time openTime,
+				r.close_time closeTime,
+				r.order_tips orderTips,
+				r.order_rule orderRule
+				r.status,
+				r.minimun,
+				r.addressCo
+			from restaurant r 
+		where r.id=#{id}
+	</select>
+	
+	
+	<select id="findRestaurant" resultType="tech.youmu.ckl.domain.Restaurant">
+		select 
+				r.id id,
+				r.name name,
+				s.name stationName,
+				r.minimun minimun,
+				r.type,
+				r.stars,
+				r.latitude,
+				r.longtitude,
+				r.cover
+			from restaurant r 
+		LEFT JOIN station s on s.id = r.station_id and s.is_del =0
+		<where>
+				r.is_del =0 
+			<if test="search !=null">
+				and r.name like '%${search}%'  or r.district_address like '%${search}%' or  r.address like '%${search}%'
+			</if>
+			<if test="stars !=null">
+				and r.stars = #{stars}
+			</if>
+			<if test="startPrice !=null and endPrice !=null">
+				and r.minimun BETWEEN #{startPrice} and #{endPrice}
+			</if>
+			<if test="startPrice ==null and endPrice !=null">
+				<![CDATA[ 
+					and r.minimun <= #{endPrice}
+				 ]]>  
+			</if>
+			<if test="startPrice !=null and endPrice ==null">
+				<![CDATA[ 
+					and r.minimun >=#{startPrice}
+				 ]]>  
+			</if>
+			<if test="stationId !=null">
+				and r.station_id = #{stationId}
+			</if>
+		</where>
+		order by r.type
+		<if test="sort == 3">
+			 ,r.minimun asc
+		</if>
+		<if test="sort == 4">
+			,r.minimun desc
+		</if>
+	</select>
+	
+	
+	<!-- 改变站点的状态 -->
+  <update id="changeStatus" parameterType="Restaurant">
+  	update restaurant 
+  		set 
+  			status = #{status}
+  		where id = #{id}
+  </update>
+  
+  <resultMap type="tech.youmu.ckl.app.vo.RestaurantDetailInfo" id="restaurantDetailInfoMap">
+		<id column="restaurantId" property="restaurantId"/>
+		<result column="restaurantName" property="restaurantName"/>
+		<result column="stationName" property="stationName"/>
+		<result column="address" property="address"/>
+		<result column="mobile" property="mobile"/>
+		<result column="stars" property="stars"/>
+		<result column="openTime" property="openTime"/>
+		<result column="closeTime" property="closeTime"/>
+		<result column="coverImg" property="coverImg"/>
+		<collection property="restaurantImgs" ofType="java.lang.String">
+    		<result column="url" />
+    	</collection>
+    	<collection property="comboInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.RestaurantComboInfo" >
+    		<result column="comboId" property="comboId"/>
+    		<result column="comboName" property="comboName"/>
+    		<result column="comboPrice" property="comboPrice"/>
+    		<result column="comboCoverImg" property="comboCoverImg"/>
+    		<result column="comboSellCount" property="comboSellCount"/>
+    	</collection>
+	</resultMap>
+  <select id="getRestaurantDetailInfo" resultMap="restaurantDetailInfoMap">
+		select 
+				r.id restaurantId,
+				r.name restaurantName,
+				s.name stationName,
+				CONCAT(r.district_address,r.address) address,
+				r.mobile,
+				DATE_FORMAT(r.open_time, '%H:%i') openTime,
+				DATE_FORMAT(r.close_time, '%H:%i') closeTime,
+				r.cover coverImg,
+				ri.url url,
+				rc.id comboId,
+				rc.name comboName,
+				rc.price comboPrice,
+				rc.img comboCoverImg,
+				rc.sell_count comboSellCount
+			from restaurant r 
+		LEFT JOIN station s on s.id = r.station_id and s.is_del =0
+		LEFT JOIN restaurant_images ri on ri.restaurant_id = r.id and ri.is_del=0
+		LEFT JOIN restaurant_combo rc on rc.restaurant_id = r.id and rc.is_del=0
+		where r.id=#{restaurantId}
+	</select>
+	
+	<select id="getRepeatCount" parameterType="Restaurant" resultType="int">
+		select count(id) from restaurant 
+		where name = #{name} and is_del = 0
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+</mapper>

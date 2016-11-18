@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.RechargeComboMapper" >
+  <select id="findRechargeComboInfo" resultType="tech.youmu.ckl.app.vo.RechargeComboInfo" >
+    select 
+     id rechargeComboId, name, content, price
+    from recharge_combo
+    where is_del=0
+  </select>
+  
+   <select id="findPresentServiceInfoByRechargeComboId" resultType="tech.youmu.ckl.app.vo.PresentServiceInfo" >
+    select 
+    	id presentServiceId, name, count, intro
+    from present_service
+    where recharge_combo_id = #{rechargeComboId} and is_del=0
+  </select>
+  
+   <select id="findPresentServiceInfoByCode" resultType="tech.youmu.ckl.app.vo.PresentServiceInfo" >
+    select 
+    	ps.id presentServiceId, ps.name, ps.count, ps.intro
+    from present_service ps
+    left join recharge_combo rc on rc.id = ps.recharge_combo_id and rc.is_del=0
+    where  ps.is_del=0 and rc.code=#{code}
+  </select>
+  
+  <select id="getRechargeComboByCode" resultType="tech.youmu.ckl.domain.RechargeCombo" >
+    select 
+     id, name, content, price
+    from recharge_combo
+    where is_del=0 and code=#{code}
+  </select>
+  
+  <select id="getById" resultType="tech.youmu.ckl.domain.RechargeCombo" >
+    select 
+     id, name, content, price,code
+    from recharge_combo
+    where is_del=0 and id=#{id}
+  </select>
+  
+   <select id="findPromotionCodeInfo" resultType="tech.youmu.ckl.app.vo.PromotionCodeInfo" >
+    select 
+      id rechargeComboId,name, price,CONCAT(code,#{code}) promotionCode
+    from recharge_combo
+    where is_del=0
+  </select>
+  
+  
+   <select id="getCountByQuery" resultType="long" >
+    select 
+     count(distinct rc.id)
+    from recharge_combo rc
+     <where>
+	    	<if test="beginTimeStr != null">
+	    		and rc.create_time >= #{beginTimeStr}
+	    	</if>
+	    	<if test="endTimeStr != null">
+	    		and rc.create_time &lt;= #{beginTimeStr}
+	    	</if>
+	    	<if test="keyword != null">
+	    		rc.name like concat('%',#{keyword},'%')
+	    	</if>
+	    	and rc.is_del = 0
+	    </where>
+  </select>
+  
+   <select id="getByQuery" resultType="tech.youmu.ckl.domain.RechargeCombo" >
+    select 
+     rc.id, 
+     rc.name, 
+     rc.content, 
+     rc.price
+    from recharge_combo rc
+     <where>
+	    	<if test="beginTimeStr != null">
+	    		and rc.create_time >= #{beginTimeStr}
+	    	</if>
+	    	<if test="endTimeStr != null">
+	    		and rc.create_time &lt;= #{beginTimeStr}
+	    	</if>
+	    	<if test="keyword != null">
+	    		rc.name like concat('%',#{keyword},'%')
+	    	</if>
+	    	and is_del = 0
+	    </where>
+  </select>
+  
+  <insert id="save" parameterType="tech.youmu.ckl.domain.RechargeCombo" >
+	    insert into recharge_combo(
+		     name, 
+		     content, 
+		     price,
+		     create_time
+	     )
+	     values(
+		     #{name}, 
+		     #{content}, 
+		     #{price},
+		     now()
+	     )
+  </insert>
+  
+    <update id="updateById" parameterType="long" >
+	    update recharge_combo
+	    <set>
+	    	<if test="name != null">
+	    		name = #{name},
+	    	</if>
+	    	<if test="content != null">
+	    		content = #{content},
+	    	</if>
+	    	<if test="price != null">
+	    		price = #{price},
+	    	</if>
+	    </set>
+	   where id = #{id}
+  </update>
+  
+   <update id="deleteById" parameterType="long" >
+	    update recharge_combo
+	    set is_del = 1
+	   where id = #{id} and is_del != 1
+  </update>
+  
+  <resultMap id="rechargeComboInfoMap" type="tech.youmu.ckl.app.vo.RechargeComboInfo">
+    <result column="rechargeComboId" property="rechargeComboId" />
+    <result column="name"  property="name" />
+    <result column="content"  property="content" />
+    <result column="price" property="price" />
+    <collection property="presentServiceInfos" ofType="tech.youmu.ckl.app.vo.PresentServiceInfo">
+	     <result column="presentServiceId" property="presentServiceId" />
+	     <result column="presentServiceName" property="name" />
+	     <result column="presentServiceCount" property="count" />
+	     <result column="presentServiceIntro" property="intro" />
+    </collection>
+   </resultMap>
+   <select id="getRechargeComboInfoByPromotionCode" resultMap="rechargeComboInfoMap" >
+    select 
+     	rc.id rechargeComboId, rc.name, rc.content, rc.price,
+		ps.id presentServiceId,ps.`name` presentServiceName,ps.count presentServiceCount,ps.intro presentServiceIntro
+    from recharge_combo rc
+    left join present_service ps on ps.recharge_combo_id = rc.id and ps.is_del=0
+    where rc.is_del=0 and rc.`code`=#{code}
+  </select>
+  
+</mapper>

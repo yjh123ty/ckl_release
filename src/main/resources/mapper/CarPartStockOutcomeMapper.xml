@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarPartStockOutcomeMapper" >
+
+<resultMap type="CarPartStockOutcome" id="CarPartStockOutcomeMap" autoMapping="true">
+	<id column="id" property="id"/>
+	<association property="carPart" javaType="CarPart">
+		<id column="cp_id" property="id"/>
+		<result column="cp_name" property="name"/>
+	</association>
+	<association property="outcomeUser" javaType="Employee">
+		<id column="e_id" property="id"/>
+		<result column="e_real_name" property="realName"/>
+	</association>
+	<association property="depot" javaType="CarPartDepot">
+		<id column="cpd_id" property="id"/>
+		<result column="cpd_name" property="name"/>
+		<association  property="station" javaType="Station">
+			<id column="s_id" property="id"/>
+			<result column="s_name" property="name"/>
+		</association>
+	</association>
+</resultMap>
+  
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="CarPartStockOutcome">
+	insert into car_part_stock_outcome
+	(
+	code,
+	car_part_id,
+	depot_id,
+	out_price,
+	outcome_date,
+	outcome_user_id,
+	outcome_type,
+	create_time
+	)
+	values (
+	#{code},
+	#{carPart.id},
+	#{depot.id},
+	#{outPrice}, 
+	#{outcomeDate},
+	#{outcomeUser.id},
+	#{outcomeType},
+	now()
+	)
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update car_part_stock_outcome
+    set 
+    	is_del = true
+    where id = #{id} and is_del != true
+  </delete>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="CarPartStockOutcomeMap">
+	SELECT
+		cpso.id,
+		cpso.`code`,
+		cpso.out_price AS outPrice,
+		cpso.outcome_date AS outcomeDate,
+		cpso.outcome_type AS outcomeType,
+		cpso.create_time AS createTime,
+		cp.id cp_id,
+		cp.`name` cp_name,
+		e.id e_id,
+		e.real_name e_real_name,
+		cpd.id cpd_id,
+		cpd.`name` cpd_name,
+		s.id s_id,
+		s. NAME s_name
+	FROM
+		car_part_stock_outcome cpso
+	LEFT JOIN car_part cp ON cp.id = cpso.car_part_id
+	LEFT JOIN employee e ON e.id = cpso.outcome_user_id
+	LEFT JOIN car_part_depot cpd ON cpd.id = cpso.depot_id
+	LEFT JOIN station s ON s.id = cpd.station_id
+	WHERE
+		cpso.id = #{id}
+	AND cpso.is_del = 0
+  </select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="keyword!=null and keyword!=''">
+				and (
+						cp.name like concat('%',#{keyword},'%')
+						or 
+						cpd.`name` like concat('%',#{keyword},'%')
+						or
+						e.real_name like concat('%',#{keyword},'%')
+						or
+						s.name like concat('%',#{keyword},'%')
+					) 
+			</if>
+			<if test="startDate!=null">
+				and cpso.outcome_date >= #{startDate}
+			</if>
+			<if test="endDate!=null">
+				and cpso.outcome_date &lt;= #{endDate}
+			</if>
+			<if test="centre!=null">
+				and cpd.centre = #{centre}
+			</if>
+			<if test="stationId!=null and stationId != -1">
+				and cpd.station_id = #{stationId}
+			</if>
+			AND cpso.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="CarPartStockOutcomeQuery" resultMap="CarPartStockOutcomeMap">
+		SELECT
+			cpso.id,
+			cpso.`code`,
+			cpso.out_price AS outPrice,
+			cpso.outcome_date AS outcomeDate,
+			cpso.outcome_type AS outcomeType,
+			cpso.create_time AS createTime,
+			cp.id cp_id,
+			cp.`name` cp_name,
+			e.id e_id,
+			e.real_name e_real_name,
+			cpd.id cpd_id,
+			cpd.`name` cpd_name,
+			s.id s_id,
+			s.`name` s_name
+		FROM
+			car_part_stock_outcome cpso
+		LEFT JOIN car_part cp ON cp.id = cpso.car_part_id
+		LEFT JOIN employee e ON e.id = cpso.outcome_user_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpso.depot_id
+		LEFT JOIN station s ON s.id = cpd.station_id
+		<include refid="whereSql"></include>
+		order by cpso.create_time desc
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="CarPartStockOutcomeQuery" resultType="long">
+		select count(cpso.id) from car_part_stock_outcome cpso
+		LEFT JOIN car_part cp ON cp.id = cpso.car_part_id
+		LEFT JOIN employee e ON e.id = cpso.outcome_user_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpso.depot_id
+		LEFT JOIN station s ON s.id = cpd.station_id
+		<include refid="whereSql"></include>
+	</select>
+	
+	<insert id="batchSaveCarPartStockOutcome" >
+	    insert into car_part_stock_outcome ( code,car_part_id, 
+	      depot_id, out_price, outcome_date, 
+	      outcome_user_id, outcome_type, create_time, is_del)
+	    values 
+	     <foreach collection="list" item="item" index="index" separator=",">
+	    	(#{item.code}, #{item.carPartId}, #{carPartDepotId}, #{item.outPrice}, now(),#{employeeId}, #{outcomeType},now(),0)
+	    </foreach>
+  	</insert>
+	
+	<select id="findRlreadyOutcome" resultType="tech.youmu.ckl.domain.CarPartStockOutcome">
+		SELECT
+			cpso.id,cpso.code,cpso.car_part_id carPartId,cpso.depot_id depotId
+		FROM
+			car_part_stock_outcome cpso
+		WHERE
+			cpso.is_del = 0 and cpso.outcome_type=#{outcomeType} and  cpso.code  in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")"> 
+			#{item.code} 
+		</foreach> 
+	</select>
+</mapper>

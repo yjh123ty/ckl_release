@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.OrderServiceDetailMapper" >
+  
+	<resultMap id="OrderServiceDetailMap" type="OrderServiceDetail" >
+    	<id column="id" property="id"/>
+  		<result column="name" property="serviceName"/>
+  		<result column="price" property="servicePrice"/>
+  		<result column="intro" property="intro"/>
+  		<result column="order_number" property="orderNumber"/>
+  		<result column="number" property="number"/>
+  		<result column="type" property="type"/>
+  		
+  		<result column="is_del" property="isDel"/>
+  		<result column="create_time" property="createTime"/>
+  		<result column="modify_time" property="modifyTime"/>
+  		
+  		
+  		<!-- 订单 -->
+		<association property="order" column="order_id" javaType="Order">
+			<id column="oid" property="id" />
+			<result column="onumber" property="orderNumber" />
+			<result column="start_time" property="startTime" />
+			<result column="end_time" property="endTime" />
+			<result column="isPayNew" property="isPayNew" />
+		</association>
+  		
+  </resultMap>
+  
+  <insert id="save" parameterType="OrderServiceDetail">
+  		insert into order_service_detail
+  		(
+  			name
+  			,price
+  			,order_number
+  			,type
+  			,order_id
+  			,number
+  			,create_time
+  		)
+  		values
+  		(
+  			#{serviceName}
+  			,#{servicePrice}
+  			,#{orderNumber}
+  			,#{type}
+  			,#{order.id}
+  			,#{number}
+  			,now()
+  		)
+  </insert>
+  
+  
+	<!-- 根据order_id获取一条明细 -->
+	<select id="getByOrderId" parameterType="long" resultMap="OrderServiceDetailMap">
+		SELECT 
+		o.id oid
+		,o.order_number onumber
+		,o.start_time
+		,o.end_time
+		,o.is_pay_new isPayNew
+		,osdetail.* 
+		from order_service_detail osdetail
+		LEFT JOIN `order` o
+			on o.id = osdetail.order_id and o.order_number = osdetail.order_number and o.is_del = 0
+		where o.id=#{id}
+	</select>
+	
+	<insert id="batchSaveOrderServiceDetail">
+	insert into order_service_detail (name,product_id,price,order_number, type, order_id,number,is_car_part, is_del, create_time)values
+	<foreach collection="list" item="item" index="index" separator=",">
+		(#{item.name},#{item.productId}, #{item.price},#{orderNumber}, #{item.type}, #{orderId},#{item.number},#{item.isCarPart}, 0, now())
+	</foreach>
+  </insert>
+  
+  <update id="batchUpdateOrderServiceDetail"  >
+    <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+	    update order_service_detail
+	    <set >
+	        modify_time = now(),
+	        <if test="item.price !=null">
+	        	price = #{item.price},
+	        </if>
+	        type = #{item.type},
+	        <if test="item.number !=null">
+	       	 number = #{item.number}
+	        </if>
+	    </set>
+	    where id = #{item.id}
+    </foreach>
+  </update>
+	
+</mapper>

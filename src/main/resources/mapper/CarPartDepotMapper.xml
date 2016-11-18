@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarPartDepotMapper" >
+  
+  <resultMap id="CarPartDepotMap" type="CarPartDepot" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		<association property="station" javaType="Station">
+			<id column="s_id" property="id"/>
+			<result column="s_name" property="name"/>
+		</association>
+		<association property="keeper" javaType="Employee">
+			<id column="a_id" property="id"/>
+			<result column="a_real_name" property="realName"/>
+		</association>
+ </resultMap>
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="CarPartDepot">
+	insert into car_part_depot
+	(
+		centre ,
+		name ,
+		station_id,
+		sn ,
+		address ,
+		keeper_id ,
+		create_time
+	)
+	values (
+		#{centre},
+		#{name},
+		#{station.id}, 
+		#{sn}, 
+		#{address}, 
+		#{keeper.id}, 
+		now()
+	)
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update car_part_depot
+    set 
+    	is_del = true
+    where id = #{id} and is_del != true
+  </delete>
+  
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="CarPartDepot">
+    update car_part_depot
+    <set> 
+   			<if test="centre != null" >
+		        centre = #{centre},
+	        </if>
+   			<if test="name != null" >
+		        name = #{name},
+	        </if>
+	        <if test="station != null and station.id != null" >
+		        `station_id` = #{station.id},
+	        </if>
+	        <if test="sn != null" >
+		        `sn` = #{sn},
+	        </if>
+	        <if test="address != null" >
+		        `address` = #{address},
+	        </if>
+	        <if test="keeper != null and keeper.id != null" >
+		        `keeper_id` = #{keeper.id},
+	        </if>
+     </set>
+    where id = #{id}
+  </update>
+  
+  <select id="checkCount" resultType="int" parameterType="CarPartDepot">
+  	select count(id) from car_part_depot where 
+  	(
+  		name = #{name} or sn = #{sn}
+  		<if test="!centre and station != null and station.id != null">
+		  	or
+		  	station_id = #{station.id}
+  		</if>
+  		<if test="keeper != null and keeper.id != null">
+		  	or
+		  	keeper_id = #{keeper.id}
+  		</if>
+  	) and is_del =0
+  	<if test="id != null">
+  		and id != #{id}
+  	</if>
+  </select>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="CarPartDepotMap">
+    select
+    	cpd.id,
+	   	cpd.centre ,
+		cpd.name ,
+		cpd.sn ,
+		cpd.address ,
+		cpd.create_time,
+		s.id s_id,
+		s.name s_name,
+		a.id a_id,
+		a.real_name a_real_name
+	from car_part_depot cpd
+	left join station  s on s.id = cpd.station_id and s.is_del = 0
+	left join employee a on a.id = cpd.keeper_id and a.is_del = 0
+    where cpd.id = #{id} and cpd.is_del = 0
+  </select>
+  
+  <!-- 获取所有-->
+	<select id="getAll" resultMap="CarPartDepotMap">
+		select
+    		cpd.id,
+			cpd.name
+		from car_part_depot cpd
+		where cpd.is_del = 0
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="keyword!=null and keyword!=''">
+				and 
+				(
+					cpd.name like concat('%',#{keyword},'%')
+					or
+					s.name like concat('%',#{keyword},'%')
+					or
+					a.real_name like concat('%',#{keyword},'%')
+				) 
+			</if>
+			<if test="centre != null">
+				and cpd.centre = #{centre}
+			</if>
+			AND cpd.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="CarPartDepotQuery" resultMap="CarPartDepotMap">
+		 select
+	    	cpd.id,
+		   	cpd.centre ,
+			cpd.name ,
+			cpd.sn ,
+			cpd.address ,
+			cpd.create_time,
+			s.id s_id,
+			s.name s_name,
+			a.id a_id,
+			a.real_name a_real_name
+		from car_part_depot cpd
+		left join station  s on s.id = cpd.station_id and s.is_del = 0
+		left join employee a on a.id = cpd.keeper_id and a.is_del = 0
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="CarPartDepotQuery" resultType="long">
+		select count(cpd.id) from  car_part_depot cpd
+		left join station  s on s.id = cpd.station_id and s.is_del = 0
+		left join employee a on a.id = cpd.keeper_id and a.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<select id="findCandidateKeepers" resultType="Employee">
+			select 
+			e.id,
+			e.real_name as realName
+			from employee e
+			left join job_title jt on jt.id = e.job_id and jt.is_del = 0
+			where jt.type = 3
+	</select>
+	
+	<select id="getByEmployeeId" resultType="tech.youmu.ckl.domain.CarPartDepot">
+    select
+    	cpd.id,
+	   	cpd.centre ,
+		cpd.name ,
+		cpd.sn ,
+		cpd.address ,
+		cpd.create_time
+	from car_part_depot cpd
+    where cpd.keeper_id = #{employeeId} and cpd.is_del = 0
+  </select>
+</mapper>

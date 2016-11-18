@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.BadgeMapper" >
+	<select id="getBadgeCountByUserId" resultType="java.lang.Integer">
+	    select 
+	    	count(ubr.id)
+	    from user_badge_ref ubr
+	    where ubr.user_id = #{userId} and ubr.is_del =0
+	 </select>
+	 
+	 <select id="findBadgeInfo" resultType="tech.youmu.ckl.app.vo.BadgeInfo">
+	    select 
+	    	if(ubr.id is null,not_img,b.img) img,b.name name,b.intro intro,if(ubr.id is null,0,1) isExist,
+	    	DATE_FORMAT(ubr.create_time, '%Y.%m.%d') time
+	    from badge b
+		LEFT JOIN user_badge_ref ubr on b.id = ubr.badge_id and ubr.is_del =0 and ubr.user_id = #{userId}
+	    where b.is_del =0 
+	 </select>
+	 
+	 <select id="isExistUserBadge" resultType="java.lang.Boolean">
+	    select 
+	    	if(count(ubr.id)=0,0,1)
+	    from user_badge_ref ubr
+	    where ubr.user_id = #{userId} and ubr.badge_id =#{badgeId} and ubr.is_del =0
+	 </select>
+	 
+	 <insert id="saveUserBadge">
+	    insert into user_badge_ref ( user_id, badge_id,create_time, is_del)
+	    values ( #{userId}, #{badgeId},now(),0)
+	  </insert>
+	  
+	 <select id="getTopicCount" resultType="java.lang.Integer">
+	 	select sum(t.count) from(
+			select count(DISTINCT ft.id)  count from forum_topic ft where  ft.user_id=#{userId}
+			UNION
+		 	select count(DISTINCT ct.id) count from companion_topic ct where ct.user_id =#{userId}
+	 	) t
+	 </select>
+	 
+	 <select id="getConsumeAmount" resultType="java.lang.Double">
+	    select sum(ub.balance) from user_bill ub
+		where ub.user_id=#{userId} and type=2 and status=2
+	 </select>
+	 
+	 <select id="getOrderCount" resultType="java.lang.Integer">
+	    select count(o.id) from `order` o
+		where o.user_id=#{userId} and o.order_type in(3,4) and o.`status` in(6,7,8)
+	 </select>
+</mapper>

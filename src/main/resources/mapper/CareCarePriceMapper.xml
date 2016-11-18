@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="tech.youmu.ckl.mapper.CarCarePriceMapper">
+	
+	<insert id="save" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+	insert into car_care_price
+	(
+	name ,
+	price ,
+	content ,
+	pic,
+	create_time
+	) values(
+	#{name },
+	#{price },
+	#{content },
+	#{pic},
+	now()
+	)
+	</insert>
+	
+	<update id="updateById" parameterType="CarCarePrice">
+		update car_care_price 
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="price != null">
+				price = #{price},
+			</if>
+			<if test="content != null">
+				content = #{content},
+			</if>
+			<if test="pic != null">
+				pic = #{pic},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<update id="deleteById" parameterType="long">
+		update car_care_price 
+		set is_del = 1 
+		where id = #{id} and is_del != 1
+	</update>
+	
+	<select id="getById" parameterType="long" resultType="CarCarePrice">
+		select 
+		id,
+		name ,
+		price ,
+		content ,
+		pic,
+		create_time createTime
+		from 
+		car_care_price
+		where id=#{id}
+	</select>
+	
+	<sql id="whereSql">
+		<where>
+			is_del = 0
+		</where>
+	</sql>
+	
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select 
+		count(distinct id)
+		from 
+		car_care_price
+		<include refid="whereSql" />
+	</select>
+	
+	<select id="getByQuery" parameterType="BaseQuery" resultType="CarCarePrice">
+		select 
+		id,
+		name ,
+		price ,
+		content ,
+		pic,
+		create_time createTime
+		from 
+		car_care_price
+		<include refid="whereSql" />
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<select id="getAll" resultType="CarCarePrice">
+		select 
+		id,
+		name ,
+		price ,
+		content ,
+		pic,
+		create_time createTime
+		from 
+		car_care_price
+		where is_del = 0
+	</select>
+	
+	<select id="findCarCarePriceInfo" resultType="tech.youmu.ckl.app.vo.CarCarePriceInfo">
+		select 
+		id,
+		name ,
+		price 
+		from 
+		car_care_price
+		where is_del = 0
+			<if test="key !=null">
+				and name like CONCAT("%",#{key},"%")
+			</if>
+	</select>
+	
+	<select id="findPic" resultType="java.lang.String" >
+    select 
+    	pic
+    from car_care_price
+    where is_del=0 and id in 
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")"> 
+			#{item.productId} 
+	</foreach> 
+  </select>
+  
+  <select id="getRepeatCount" parameterType="CarCarePrice" resultType="int">
+  	select count(id) from car_care_price 
+  	where name = #{name} and is_del = 0
+  	<if test="id != null">
+  		and id != #{id}
+  	</if>
+  </select>
+</mapper>

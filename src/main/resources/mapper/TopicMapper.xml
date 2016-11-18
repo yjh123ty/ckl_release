@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.TopicMapper">
+
+	<resultMap id="BaseResultMap" type="Topic" autoMapping="true">
+		<id column="id" jdbcType="BIGINT" property="id" />
+		<result column="content" jdbcType="LONGVARCHAR" property="content" />
+		<result column="top" jdbcType="BIT" property="top" />
+		<result column="is_del" jdbcType="BIT" property="isDel" />
+		<result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+		<result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+		<association javaType="User" property="user">
+			<id column="uid" property="id" />
+			<result column="unick_name" property="nickName"></result>
+			<result column="umobile" property="mobile"></result>
+		</association>
+	</resultMap>
+  
+  <sql id="whereSql">
+		<where>
+			<if test="startTime != null">
+				and ft.create_time > #{startTime}
+			</if>
+				
+			<if test="endTime != null">
+				and ft.create_time &lt; #{endTime}
+			</if>
+			<if test="keyword != null">
+				and u.nick_name like concat("%", #{keyword},"%")
+				or u.mobile like concat("%", #{keyword},"%")
+			</if>
+			<if test="userId != null">
+				AND u.id = #{userId}
+			</if>
+			and ft.is_del=0
+		</where>
+	</sql>
+
+	<sql id="orderSql">
+		order by ft.top desc, ft.create_time desc
+	</sql>
+
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+
+	<select id="getForumTopicsCountByQuery" resultType="long" parameterType="TopicQuery">
+		select 
+  		count(ft.id)
+  		from forum_topic ft
+  		left join user u on ft.user_id = u.id and u.is_del = 0
+		<include refid="whereSql" />
+	</select>
+  
+  <select id="getForumTopicsByQuery" parameterType="TopicQuery" resultMap="BaseResultMap">
+  	select 
+  		ft.id,
+  		ft.content,
+  		ft.is_del,
+  		ft.create_time,
+  		ft.modify_time,
+  		u.id uid,
+  		u.mobile umobile,
+  		u.nick_name unick_name
+  	from forum_topic ft
+  		left join user u on ft.user_id = u.id and u.is_del = 0
+  		<include refid="whereSql" /> 
+  		<include refid="orderSql" /> 
+  		<include refid="pageSql" />
+  </select>
+  
+  <update id="deleteForumTopicById" parameterType="long">
+	  	update forum_topic
+	  		set is_del =1
+	  	where id=#{id}
+  </update>
+  
+  <update id="topForumTopicById" parameterType="long">
+  		update forum_topic
+	  		set top =unix_timestamp(now())
+	  	where id=#{id}
+  </update>
+  
+  
+  <!-- #######################伴侣帖子######################## -->
+  <resultMap id="ResultMap" type="Topic" autoMapping="true">
+		<id column="id" jdbcType="BIGINT" property="id" />
+		<result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+		<result column="end_time" jdbcType="TIMESTAMP" property="endTime" />
+		<result column="is_del" jdbcType="BIT" property="isDel" />
+		<result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+		<result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+		<association javaType="User" property="user">
+			<id column="uid" property="id" />
+			<result column="unick_name" property="nickName"></result>
+			<result column="umobile" property="mobile"></result>
+		</association>
+		<association javaType="Route" property="route">
+			<id column="rid" property="id" />
+			<result column="rname" property="name"></result>
+		</association>
+	</resultMap>
+  
+  <sql id="whereSql1">
+		<where>
+			<if test="startTime != null">
+				and ct.create_time > #{startTime}
+			</if>
+				
+			<if test="endTime != null">
+				and ct.create_time &lt; #{endTime}
+			</if>
+			<if test="keyword != null">
+				and u.nick_name like concat("%", #{keyword},"%")
+				or u.mobile like concat("%", #{keyword},"%")
+			</if>
+			<if test="userId != null">
+				AND u.id = #{userId}
+			</if>
+			and ct.is_del=0
+		</where>
+	</sql>
+
+
+	<sql id="orderSql1">
+		order by ct.top desc, ct.create_time desc
+	</sql>
+
+	<sql id="pageSql1">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+
+	<select id="getCompanionTopicsCountByQuery" resultType="long" parameterType="TopicQuery">
+		select 
+  		count(ct.id)
+  		from companion_topic ct
+  		left join user u on ct.user_id = u.id and u.is_del = 0
+		<include refid="whereSql1" />
+	</select>
+  
+  <select id="getCompanionTopicsByQuery" parameterType="TopicQuery" resultMap="ResultMap">
+  	select 
+  		ct.id,
+  		ct.title,
+  		ct.content,
+  		ct.start_time,
+  		ct.end_time,
+  		ct.is_del,
+  		ct.create_time,
+  		ct.modify_time,
+  		u.id uid,
+  		u.mobile umobile,
+  		u.nick_name unick_name,
+  		r.id rid,
+  		r.name rname
+  	from companion_topic ct
+  		left join user u on ct.user_id = u.id and u.is_del = 0
+  		left join route r on r.id = ct.route_id and r.is_del = 0
+  		<include refid="whereSql1" /> 
+  		<include refid="orderSql1" /> 
+  		<include refid="pageSql1" />
+  </select>
+  
+  <update id="deleteCompanionTopicById" parameterType="long">
+	  	update companion_topic
+	  		set is_del = 1
+	  	where id=#{id}
+  </update>
+  
+  <update id="topCompanionTopicById" parameterType="long">
+  		update companion_topic
+	  		set top = unix_timestamp(now())
+	  	where id=#{id}
+  </update>
+  
+</mapper>

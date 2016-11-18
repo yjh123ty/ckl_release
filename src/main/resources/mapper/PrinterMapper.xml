@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="tech.youmu.ckl.mapper.PrinterMapper" >
+  <resultMap id="BaseResultMap" type="tech.youmu.ckl.domain.Printer" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="partner" property="partner" jdbcType="VARCHAR" />
+    <result column="name" property="name" jdbcType="VARCHAR" />
+    <result column="status" property="status" jdbcType="INTEGER" />
+    <result column="machine_code" property="machineCode" jdbcType="VARCHAR" />
+    <result column="api_key" property="apiKey" jdbcType="VARCHAR" />
+    <result column="printer_key" property="printerKey" jdbcType="VARCHAR" />
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="modify_time" property="modifyTime" jdbcType="TIMESTAMP" />
+    <result column="is_del" property="isDel" jdbcType="BIT" />
+    
+    <association property="station" column="station_id" javaType="Station">
+			<id column="sid" property="id" />
+			<result column="sname" property="name" />
+	</association>
+	
+  </resultMap>
+  
+  
+  <select id="getById" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    select 
+    	p.*
+    	,s.id sid
+    	,s.name sname
+    from printer p
+    left join station s on s.id = p.station_id and s.is_del = 0
+    where p.id = #{id,jdbcType=BIGINT} and p.is_del = 0
+  </select>
+  
+  <update id="deleteById" parameterType="java.lang.Long" >
+    update printer set is_del = 0
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <insert id="save" parameterType="tech.youmu.ckl.domain.Printer" >
+    insert into printer (id, partner, name, 
+      status, machine_code, api_key, 
+      printer_key, station_id, create_time, is_del)
+    values (#{id,jdbcType=BIGINT}, #{partner,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
+      #{status,jdbcType=INTEGER}, #{machineCode,jdbcType=VARCHAR}, #{apiKey,jdbcType=VARCHAR}, 
+      #{printerKey,jdbcType=VARCHAR}, #{station.id}, now(), 0)
+  </insert>
+  
+  <select id="getByStationId" resultMap="BaseResultMap" parameterType="java.lang.Long">
+  	select 
+    	p.*
+    	,s.id sid
+    	,s.name sname
+    from printer p
+    left join station s on s.id = p.station_id and s.is_del = 0
+    where s.id = #{stationId,jdbcType=BIGINT} and p.is_del = 0
+  </select>
+  
+  <!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="BaseResultMap">
+		select 
+		p.*
+		,s.id sid
+		,s.name sname
+		from printer p
+		left join station s on s.id = p.station_id and s.is_del = 0
+		where p.is_del = 0
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+  
+  <select id="getCountByQuery" parameterType="BaseQuery" resultType="java.lang.Long" >
+    select count(p.id) from printer p
+    left join station s on s.id = p.station_id and s.is_del = 0
+    where p.is_del = 0
+  </select>
+  
+  <update id="updateById" parameterType="tech.youmu.ckl.domain.Printer" >
+    update printer
+    <set >
+      <if test="partner != null" >
+        partner = #{partner,jdbcType=VARCHAR},
+      </if>
+      <if test="name != null" >
+        name = #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null" >
+        status = #{status,jdbcType=INTEGER},
+      </if>
+      <if test="machineCode != null" >
+        machine_code = #{machineCode,jdbcType=VARCHAR},
+      </if>
+      <if test="apiKey != null" >
+        api_key = #{apiKey,jdbcType=VARCHAR},
+      </if>
+      <if test="printerKey != null" >
+        printer_key = #{printerKey,jdbcType=VARCHAR},
+      </if>
+      <if test="station != null" >
+        station_id = #{station.id,jdbcType=BIGINT},
+      </if>
+      <if test="modifyTime != null" >
+        modify_time = now(),
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel,jdbcType=BIT},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+</mapper>

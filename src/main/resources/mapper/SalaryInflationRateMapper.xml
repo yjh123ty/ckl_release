@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.SalaryInflationRateMapper">
+
+	<resultMap id="SalaryInflationRateMap" type="SalaryInflationRate">
+		<id column="id" property="id"/>
+		<result column="record_year" property="recordYear" />
+		<result column="ratio" property="ratio" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+	</resultMap>
+	
+	  <!-- 添加一个 -->
+	  <insert id="save" parameterType="SalaryInflationRate">
+	    insert into salary_inflation_rate (record_year, ratio,create_time)
+	    values (#{recordYear}, #{ratio},now())
+	  </insert>
+	  
+	  <!-- 更新一条记录 -->
+	  <update id="updateById" parameterType="SalaryInflationRate">
+	    update salary_inflation_rate
+	    set record_year = #{recordYear},
+	      ratio = #{ratio},
+	      modify_time=now()
+	    where id = #{id}
+	  </update>
+	
+	<select id="getAll" resultMap="SalaryInflationRateMap">
+		select s.*
+		from salary_inflation_rate s
+	</select>
+	
+	<select id="getById" resultMap="SalaryInflationRateMap" parameterType="java.lang.Long" >
+	    select 	
+			    s.*
+		    from salary_inflation_rate s
+	    where s.id = #{id} AND s.is_del = 0
+  	</select>
+  	
+  	<!-- 根据年份获取薪点值 -->
+  	<select id="getByYear" resultMap="SalaryInflationRateMap" parameterType="java.lang.Integer" >
+	    select 	
+			    s.*
+		    from salary_inflation_rate s
+	    where s.record_year = #{year} AND s.is_del = 0
+  	</select>
+	
+</mapper>

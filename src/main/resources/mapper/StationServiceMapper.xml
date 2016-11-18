@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.StationServiceMapper">
+  <resultMap id="BaseResultMap" type="StationService" autoMapping="true">
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+    <association property="station" javaType="Station">
+    	<id column="sid" property="id"/>
+    	<result column="sname" property="name"/>
+    </association>
+    <association property="serviceType" javaType="ServiceType">
+    	<id column="stid" property="id"/>
+    	<result column="stname" property="name"/>
+    	<result column="stis_free" property="isFree"/>
+    </association>
+  </resultMap>
+  
+  
+</mapper>

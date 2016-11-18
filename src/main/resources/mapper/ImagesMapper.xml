@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.ImagesMapper">
+  	<!-- 多图片记录保存 -->
+  	<insert id="save">
+  		insert into ${tableName}
+  		(
+  			gid,
+  			url,
+  			create_time
+  		)
+  		values
+  		<foreach collection="images.urls" item="url" separator=",">
+  			(#{images.gId}, #{url}, now())
+  		</foreach>
+  	</insert>
+  	
+  	<!-- 查询一组图片地址 -->
+  	<select id="getImageUrlsByGroupId" resultType="java.lang.String">
+  		select url from ${tableName} where gid = #{id}
+  		and is_del = 0 
+  	</select>
+  	
+  	<!-- 删除一组图片地址 -->
+  	<select id="delImagesByGroupId" parameterType="java.lang.String">
+  		update ${tableName} 
+  			set is_del = 1 
+  		where gid = #{id}
+  	</select>
+</mapper>

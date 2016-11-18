@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.TrackMapper" >
+	<resultMap type="tech.youmu.ckl.app.vo.TrackMonthInfo" id="trackMonthInfoMap">  
+        <result column="month" property="month"/>  
+        <collection property="trackInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.TrackInfo" >
+          <result column="trackId" property="trackId"/> 
+          <result column="day" property="day"/> 
+          <result column="routeImg" property="routeImg"/> 
+          <result column="startName" property="startName"/> 
+          <result column="endName" property="endName"/> 
+          <result column="distance" property="distance"/> 
+          <result column="dayCount" property="dayCount"/> 
+        </collection>  
+    </resultMap>
+  <select id="findTrackMonthInfo" resultMap="trackMonthInfoMap">
+     select 
+    	ut.id trackId,
+    	if(DATE_FORMAT(ut.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(ut.create_time, '%m月'),DATE_FORMAT(ut.create_time, '%Y年%m月'))  `month`,
+		DATE_FORMAT(ut.create_time, '%d日')  day,
+		ut.route_img routeImg,ut.start_name startName,ut.end_name endName,
+		ut.distance,ut.day_count dayCount
+    from track ut
+    where ut.user_id = #{userId} and ut.is_del =0 
+  </select>
+  
+  
+  <resultMap id="trackDetailInfoMap" type="tech.youmu.ckl.app.vo.TrackDetailInfo">
+    <result column="trackId" property="trackId" />
+    <result column="date"  property="date" />
+    <result column="distance"  property="distance" />
+    <result column="dayCount" property="dayCount" />
+    <result column="capitaCost" property="capitaCost" />
+    <collection property="suitNames" ofType="java.lang.String">
+	    <result column="suitName"/>
+    </collection>
+     <collection property="trackCoordInfos" ofType="tech.youmu.ckl.app.vo.TrackCoordInfo">
+	     <result column="lng" property="lng" />
+	     <result column="lat" property="lat" />
+    </collection>
+    
+  </resultMap>
+   <select id="getTrackDetailInfo" resultMap="trackDetailInfoMap">
+     select 
+    	ut.id trackId,
+    	if(DATE_FORMAT(ut.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(ut.create_time, '%m月%d日'),DATE_FORMAT(ut.create_time, '%Y年%m月%d日'))  date,
+    	ut.distance,ut.day_count dayCount,
+    	uts.name suitName,ut.capita_cost capitaCost,
+    	tc.longtitude lng,tc.latitude lat
+    from track ut
+    left join track_suit uts on uts.track_id = ut.id and uts.is_del=0
+    left join track_coord tc on tc.track_id = ut.id and tc.is_del=0
+    <where>
+    	 ut.is_del =0 
+    	<if test="trackId">
+    		and ut.id = #{trackId}
+    	</if>
+    	<if test="userRouteId">
+    		and ut.user_route_id = #{userRouteId}
+    	</if>
+    </where>  
+    order by tc.`order`
+  </select>
+  
+  <select id="getById" resultType="tech.youmu.ckl.domain.Track">
+     select 
+    	id, user_id userId, start_name startName, end_name endName, distance, 
+    	 day_count dayCount, capita_cost capitaCost, user_route_id userRouteId, 
+    	 route_img routeImg, is_del isDel, create_time createTime, modify_time modifyTime
+    from track 
+    where is_del =0 and id = #{id}
+  </select>
+  
+   <select id="getByUserRouteId" resultType="tech.youmu.ckl.domain.Track">
+     select 
+    	id, user_id userId, start_name startName, end_name endName, distance,
+    	 day_count dayCount, capita_cost capitaCost, user_route_id userRouteId, 
+    	 route_img routeImg, is_del isDel, create_time createTime, modify_time modifyTime
+    from track 
+    where is_del =0 and user_route_id = #{userRouteId}
+  </select>
+  
+  <insert id="saveTrack" useGeneratedKeys="true"  keyProperty="id">
+    insert into track ( user_id, start_name, 
+      end_name, distance, 
+      day_count, capita_cost, user_route_id, 
+      route_img, is_del, create_time)
+    values ( #{userId}, #{startName}, 
+      #{endName}, #{distance},
+      #{dayCount}, #{capitaCost}, #{userRouteId}, 
+      #{routeImg},0, now() 
+      )
+  </insert>
+  
+  <insert id="bacthSaveTrackSuit" >
+    insert into track_suit ( track_id, name,is_del, create_time)values 
+    <foreach collection="suitNames" item="suitName" separator=",">
+  		(#{trackId}, #{suitName},0, now())
+  	</foreach>
+  </insert>
+  
+  <insert id="bacthSaveTrackCoord" >
+    insert into track_coord ( track_id,latitude,longtitude, `order`, is_del, create_time)values
+    <foreach collection="trackCoords" item="trackCoord" separator=",">
+  		(#{trackId}, #{trackCoord.latitude},#{trackCoord.longtitude},#{trackCoord.order},0, now())
+  	</foreach>
+  </insert>
+  
+  
+</mapper>

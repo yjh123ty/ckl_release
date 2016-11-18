@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.EmployeeAttendanceInfoMapper">
+
+	<resultMap id="EmployeeAttendanceInfoMap" type="EmployeeAttendanceInfo">
+		<id column="id" property="id"/>
+		<result column="days" property="days" />
+		<result column="record_month" property="recordMonth" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 员工 -->
+		<association property="employee" column="employee_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="mobile" property="mobile" />
+			<result column="ename" property="realName" />
+			<result column="salary_level" property="salaryLevel" />
+			<result column="emp_number" property="empNumber" />
+			
+			
+			<!-- 职称 -->
+			<association property="jobTitle" column="job_id" javaType="JobTitle">
+				<id column="jid" property="id" />
+				<result column="jname" property="name" />
+			</association>
+			<!-- 所属服务站 -->
+			<association property="station" column="station_id" javaType="Station">
+				<id column="sid" property="id" />
+				<result column="sname" property="name" />
+			</association>
+			
+			<collection ofType="Station" property="stations">
+			  	<id column="stationsId" property="id"/>
+			  	<result column="stationsName" property="name"/>
+	  		</collection>
+			
+		</association>
+	</resultMap>
+
+	<!-- 获取当月所有打卡记录-->
+	<select id="getAll" resultMap="EmployeeAttendanceInfoMap" parameterType="EmployeeAttendanceInfoQuery">
+		select info.* from employee_attendance_info info
+		where info.is_del = 0
+	</select>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<!-- 关键词：员工账号或昵称或真实姓名 -->
+			<if test="keywords!=null and keywords!=''">
+			(
+				e.mobile like concat('%',#{keywords},'%') 
+				or 
+				e.real_name like concat('%',#{keywords},'%')
+			)
+			</if>
+			<if test="searchTimeStr != null and  searchTimeStr !=''">
+			  AND info.record_month like concat('%',#{searchTimeStr},'%') 
+		  	</if>
+			AND info.is_del = 0 
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="EmployeeAttendanceInfoQuery" resultMap="EmployeeAttendanceInfoMap">
+		select 
+			info.* 
+			,e.id eid
+			,e.mobile 
+			,e.real_name ename
+			,e.salary_level
+			,e.emp_number
+			,stationToRef.id stationsId
+			,stationToRef.name stationsName
+			,s.id sid
+			,s.name sname
+			,job.id jid
+			,job.name jname
+		from 
+		(
+			select * from employee_attendance_info 
+			<if test="currentPage > 0 and pageSize > 0">
+				limit #{start},#{pageSize}
+			</if>
+		) info
+		
+		left join employee e 
+			on e.id = info.employee_id and e.is_del = 0
+		left join employee_station_ref esf
+			on e.id = esf.employee_id and esf.is_del = 0
+		left join station stationToRef
+			on stationToRef.id = esf.station_id and stationToRef.is_del = 0
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="EmployeeAttendanceInfoQuery" resultType="long">
+		select count(info.id) from employee_attendance_info info
+		left join employee e 
+			on e.id = info.employee_id and e.is_del = 0
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<!-- 每月工资结算日，统计员工当月出勤的总天数 -->
+	<insert id="saveAttendanceRecord" parameterType="EmployeeAttendanceInfo">
+		insert into employee_attendance_info 
+			(employee_id,days,record_month,create_time)
+		SELECT 
+			recordDays.empId
+			,COUNT(recordDays.record_day) days
+			,( SELECT  SUBSTR(date_add(curdate(),interval -1 month), 1,7) ) as record_month
+			,now()
+		FROM
+		(
+			select DISTINCT
+					ea.employee_id as	empId		
+					,SUBSTR(ea.create_time, 1,10) as record_day 
+					
+				from employee_attendance ea
+				left join employee e on e.id = ea.employee_id and e.is_del = 0
+				where  ea.is_del = 0 and ea.create_time like concat(SUBSTR(date_add(curdate(),interval -1 month), 1,7),"%")
+		) recordDays
+		GROUP BY recordDays.empId
+	</insert>
+	
+</mapper>

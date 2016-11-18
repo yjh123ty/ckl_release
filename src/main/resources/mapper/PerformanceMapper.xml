@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.PerformanceMapper" >
+
+  <resultMap id="PerformanceMap" type="Performance" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="record_month" property="recordMonth"/>
+    <result column="ke_in_month" property="keInMonth"/>
+    <result column="avg_star" property="avgStar"/>
+    <result column="score" property="score"/>
+    
+    <result column="create_time" property="createTime"/>
+    <result column="modify_time" property="modifyTime" jdbcType="TIMESTAMP" />
+    <result column="is_del" property="isDel"/>
+    
+	<association property="employee" column="emp_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="emobile" property="mobile" />
+			<result column="erealName" property="realName" />
+			<result column="eNumber" property="empNumber" />
+			
+			<!-- 部门 -->
+			<association property="dept" column="dept_id" javaType="Department">
+				<result column="did" property="id" />
+				<result column="dname" property="name" />
+			</association>
+			<!-- 职称 -->
+			<association property="jobTitle" column="job_id" javaType="JobTitle">
+				<result column="jid" property="id" />
+				<result column="jname" property="name" />
+			</association>
+			<!-- 服务站 -->
+			<association property="station" column="station_id" javaType="Station">
+				<result column="stid" property="id" />
+				<result column="stname" property="name" />
+			</association>
+			
+	</association>
+	
+  </resultMap>
+  
+  <select id="getById" resultMap="PerformanceMap" parameterType="java.lang.Long" >
+    select 
+		    p.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,d.id did
+		    ,d.name dname
+		    ,job.id jid
+			,job.name jname
+			,st.id stid
+			,st.name stname
+	    from performance p
+	    left join employee e
+    		on e.id = p.emp_id and e.is_del = 0
+    	left join department d
+    		on d.id = e.dept_id and d.is_del = 0
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+   		left join station st
+   		on st.id = e.station_id and st.is_del = 0
+    where p.id = #{id,jdbcType=BIGINT} AND p.is_del = 0
+  </select>
+  
+  <delete id="deleteById" parameterType="java.lang.Long" >
+    update performance 
+    set is_del = true,modify_time=now()
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+  <select id="getAll" resultMap="PerformanceMap">
+		select 
+		    p.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,d.id did
+		    ,d.name dname
+			,job.name jname
+			,st.id stid
+			,st.name stname
+			from employee e
+	    left join performance p
+    		on e.id = p.emp_id and p.is_del = 0
+    	left join department d
+    		on d.id = e.dept_id and d.is_del = 0
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+   		left join station st
+   		on st.id = e.station_id and st.is_del = 0
+		   where e.is_del = 0
+  </select>
+  
+  <insert id="save" parameterType="performance" >
+    insert into performance 
+    (	
+    	emp_id
+    	,record_month
+    	,ke_in_month
+    	,avg_star
+	    ,score
+	    ,create_time
+    )
+    values 
+    (
+      #{employee.id}
+    , #{recordMonth}
+    , #{keInMonth}
+    , #{avgStar}
+    , #{score}
+    , now()
+      )
+  </insert>
+  
+  
+  <sql id="whereSql">
+  	<where>
+	  	  <if test="keywords != null and keywords!=''" >
+	        (
+				e.mobile like concat('%',#{keywords},'%') 
+				or 
+				e.real_name like concat('%',#{keywords},'%') 
+				or
+				job.name like concat('%',#{keywords},'%')
+				or
+				st.name like concat('%',#{keywords},'%')  
+				)
+	      </if>
+	      <if test="searchTime != null ">
+			  AND p.record_month like concat('%',#{searchTime},'%') 
+		  </if>
+		  <if test="beginTimeStr != null and beginTimeStr!='' and endTimeStr != null and endTimeStr!=''">
+			  AND p.record_month  BETWEEN #{beginTimeStr} AND #{endTimeStr}
+		  </if>
+		  <if test="deptId != null ">
+			  AND d.id = #{deptId}
+		  </if>
+		  AND p.is_del = 0
+     </where>
+  </sql>
+  
+  <!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+  
+  <update id="updateById" parameterType="Performance" >
+    update performance p
+    set 
+    p.score = #{score}
+    ,modify_time=now()
+    where p.id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="PerformanceQuery" resultMap="PerformanceMap">
+		select 
+		    p.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,e.emp_number eNumber
+		    ,d.id did
+		    ,d.name dname
+		    ,job.id jid
+			,job.name jname
+	 		,st.id stid
+			,st.name stname
+			from employee e
+	    left join performance p
+    		on e.id = p.emp_id and p.is_del = 0
+    	left join department d
+    		on d.id = e.dept_id and d.is_del = 0
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+   		left join station st
+   			on st.id = e.station_id and st.is_del = 0
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="PerformanceQuery" resultType="long">
+		select count(p.id) 
+	    from employee e
+	    left join performance p
+    		on e.id = p.emp_id and p.is_del = 0
+    	left join department d
+    		on d.id = e.dept_id and d.is_del = 0
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+   		left join station st
+   			on st.id = e.station_id and st.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<select id="getLastMonthPerformanceInfo" resultType="tech.youmu.ckl.app.vo.LastMonthPerformanceInfo">
+		select num totalOrderCount,total_amount totalAmount,avg_star avgStar from history_count_orderinfo 
+		where record_month = #{lastMonth} and emp_id=#{employeeId}
+	</select>
+</mapper>

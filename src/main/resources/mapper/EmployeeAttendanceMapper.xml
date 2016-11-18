@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.EmployeeAttendanceMapper">
+
+	<resultMap id="EmployeeAttendanceMap" type="EmployeeAttendance">
+		<id column="id" property="id"/>
+		<result column="intro" property="intro" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 员工 -->
+		<association property="employee" column="employee_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="ename" property="realName" />
+			<result column="enum" property="empNumber" />
+		</association>
+		
+	</resultMap>
+	
+	<sql id="whereSql">
+		<where>
+			<if test="employeeId != null">
+				ea.employee_id=#{employeeId}
+			</if>
+			<if test="recordMonth !=null">
+				AND ea.create_time like concat(#{recordMonth},'%')
+			</if>
+			AND ea.is_del = 0
+		</where>
+	</sql>
+	
+  
+	<!-- 获取当月某位员工的打卡明细记录-->
+	<select id="getByQuery" resultMap="EmployeeAttendanceMap" parameterType="EmployeeAttendanceQuery">
+		select 
+			ea.* 
+			,e.id eid 
+			,e.real_name ename
+			,e.emp_number enum
+		from employee_attendance ea
+		left join employee e on e.id = ea.employee_id and e.is_del = 0
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<select id="getCountByQuery" resultType="long" parameterType="EmployeeAttendanceQuery">
+		select count(ea.id) from employee_attendance ea
+		left join employee e on e.id = ea.employee_id and e.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<select id="findTodayAttendanceInfo" resultType="tech.youmu.ckl.app.vo.TodayAttendanceInfo" >
+		select DATE_FORMAT(ea.create_time, '%H:%i:%S') time,s.name stationName from employee_attendance ea
+		left join station s on s.id = ea.station_id
+		where ea.employee_id=#{employeeId} and DATE_FORMAT(ea.create_time, '%Y-%m-%d') =DATE_FORMAT(#{date}, '%Y-%m-%d')
+	</select>
+	
+	<select id="isTodayAttendance" resultType="java.lang.Boolean" >
+		select if(count(ea.id>0),1,0)  from employee_attendance ea
+		where ea.station_id=#{stationId} and ea.employee_id=#{employeeId} and DATE_FORMAT(ea.create_time, '%Y-%m-%d') =DATE_FORMAT(#{date}, '%Y-%m-%d')
+	</select>
+	
+   <insert id="save" >
+    insert into employee_attendance ( employee_id,station_id, create_time,is_del)
+    values ( #{employeeId},#{stationId},now(),0)
+  </insert>
+	
+</mapper>

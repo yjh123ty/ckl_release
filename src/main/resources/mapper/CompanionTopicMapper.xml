@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CompanionTopicMapper" >
+  <select id="findCompanionTopicInfo" resultType="tech.youmu.ckl.app.vo.CompanionTopicInfo">
+   select 
+    	ct.id companionTopicId,ct.title,DATE_FORMAT(ct.create_time, '%m-%d %H:%i') time,DATE_FORMAT(ct.start_time, '%Y-%m-%d') startTime,DATE_FORMAT(ct.end_time, '%Y-%m-%d') endTime,ct.permission,
+		u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,
+		count(DISTINCT ctc.id) commentCount,count(DISTINCT ctv.id) viewCount,
+		r.id routeId,r.name routeName
+	from companion_topic ct
+	left join route r on r.id = ct.route_id and r.is_del =0
+	left join user u on u.id = ct.user_id
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=ct.user_id and uf.is_del =0
+	LEFT JOIN companion_topic_comment ctc on ctc.companion_topic_id = ct.id and ctc.type = 1 and ctc.is_del =0
+	left join companion_topic_view ctv on ctv.companion_topic_id = ct.id and ctv.is_del = 0
+	<where>
+		ct.is_del = 0
+		<if test="routeId !=null">
+			and ct.route_id = #{routeId}
+		</if>
+		<if test="time !=null">
+			and DATE_FORMAT(ct.start_time, '%Y-%m') = #{time}
+		</if>
+	</where>
+	GROUP BY ct.id
+	order by ct.top desc,ct.create_time desc
+  </select>
+  
+  
+  <select id="findOneselfCompanionTopicInfo" resultType="tech.youmu.ckl.app.vo.CompanionTopicInfo">
+   select 
+    	ct.id companionTopicId,ct.title,DATE_FORMAT(ct.create_time, '%m-%d %H:%i') time,DATE_FORMAT(ct.start_time, '%Y-%m-%d') startTime,DATE_FORMAT(ct.end_time, '%Y-%m-%d') endTime,
+		u.id userId,u.nick_name userName,u.head_icon headIcon,
+		count(DISTINCT ctc.id) commentCount,count(DISTINCT ctv.id) viewCount,
+		r.id routeId,r.name routeName
+	from companion_topic ct
+	left join route r on r.id = ct.route_id and r.is_del =0
+	left join user u on u.id = ct.user_id
+	LEFT JOIN companion_topic_comment ctc on ctc.companion_topic_id = ct.id and ctc.type = 1 and ctc.is_del =0
+	left join companion_topic_view ctv on ctv.companion_topic_id = ct.id and ctv.is_del = 0
+	<where>
+		ct.is_del = 0 and ct.user_id = #{userId}
+	</where>
+	GROUP BY ct.id
+	order by ct.top desc,ct.create_time desc
+  </select>
+  
+  <resultMap type="tech.youmu.ckl.app.vo.CompanionTopicDetailInfo" id="companionTopicDetailInfoMap">  
+        <result column="companionTopicId" property="companionTopicId"/>  
+        <result column="title" property="title"/>  
+        <result column="content" property="content"/>  
+        <result column="time" property="time"/>  
+        <result column="startTime" property="startTime"/>  
+        <result column="endTime" property="endTime"/> 
+        <result column="userName" property="userName"/>
+         <result column="headIcon" property="headIcon"/> 
+        <result column="routeId" property="routeId"/> 
+        <result column="routeName" property="routeName"/>  
+        
+        <collection property="imgs" javaType="java.util.List" ofType="java.lang.String" >
+         <result column="img" property="img"/> 
+        </collection>  
+        <collection property="companionTopicCommentInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.CompanionTopicCommentInfo" >
+         <result column="commentUserId" property="userId"/> 
+         <result column="commentUserName" property="userName"/> 
+         <result column="commentHeadIcon" property="headIcon"/> 
+         <result column="commentTime" property="time"/> 
+         <result column="commentContent" property="content"/> 
+         <result column="type" property="type"/> 
+         <result column="byReplyName" property="byReplyName"/> 
+        </collection>
+    </resultMap>
+    
+   <select id="getCompanionTopicDetailInfo" resultMap="companionTopicDetailInfoMap">
+   select 
+    	ct.id companionTopicId,ct.title,ct.content,DATE_FORMAT(ct.create_time, '%m-%d %H:%i') time,
+    	DATE_FORMAT(ct.start_time, '%Y-%m-%d') startTime,DATE_FORMAT(ct.end_time, '%Y-%m-%d') endTime,
+		if(uf.note is null,u.nick_name,uf.note) userName, u.head_icon headIcon, 
+		r.id routeId,r.name routeName,
+		ctc.content commentContent,if(ruf.note is null,ru.nick_name,ruf.note) byReplyName,
+    	DATE_FORMAT(ctc.create_time, '%m-%d %H:%i') commentTime,ctc.type,
+    	cu.id commentUserId,if(cuf.note is null,cu.nick_name,cuf.note) commentUserName,cu.head_icon commentHeadIcon,
+    	cti.url img
+	from companion_topic ct
+	left join route r on r.id = ct.route_id and r.is_del =0
+	left join user u on u.id = ct.user_id
+	left join user_friend uf on uf.user_id =#{userId} and uf.friend_id=u.id and uf.is_del =0
+	LEFT JOIN companion_topic_comment ctc on ctc.companion_topic_id = ct.id and ctc.type = 1 and ctc.is_del =0
+	LEFT JOIN user cu on cu.id = ctc.user_id and cu.is_del =0
+	left join user_friend cuf on cuf.user_id =#{userId} and cuf.friend_id=cu.id and cuf.is_del =0
+	LEFT JOIN user ru on ru.id = ctc.by_reply_id and ru.is_del =0
+	left join user_friend ruf on ruf.user_id =#{userId} and ruf.friend_id=ru.id and ruf.is_del =0
+	left join companion_topic_image cti on cti.companion_topic_id = ct.id
+	<where>
+		ct.is_del = 0 and ct.id =#{companionTopicId}
+	</where>
+	order by ctc.create_time desc
+  </select>
+  
+  <insert id="save"   useGeneratedKeys="true" keyProperty="id" >
+    insert into companion_topic (title, user_id, 
+      start_time, end_time, route_id,top, is_del, 
+      create_time,content,permission
+      )
+    values ( #{title}, #{userId},#{startTime}, #{endTime}, 
+    		#{routeId}, #{top},0,now(), #{content},#{permission})
+  </insert>
+  
+   <insert id="batchSaveImg">
+	insert into companion_topic_image (url,companion_topic_id,is_del, create_time)values
+	<foreach collection="urls" item="item" index="index" separator=",">
+		( #{item},#{companionTopicId},0,now())
+	</foreach>
+  </insert>
+  
+  <update id="update"  >
+    update companion_topic
+    <set >
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  
+   <insert id="batchSaveCompanionTopicPermission">
+	insert into companion_topic_permission (friend_id,companion_topic_id,is_del, create_time)values
+	<foreach collection="friendIds" item="item" index="index" separator=",">
+		( #{item},#{companionTopicId},0,now())
+	</foreach>
+  </insert>
+  
+  
+  <select id="findUserPermission" resultType="java.lang.Long">
+    select 
+    	ctp.companion_topic_id companionTopicId
+	from  companion_topic_permission ctp 
+	where ctp.is_del = 0 and ctp.friend_id =#{userId}
+  </select>
+  
+  
+  <insert id="saveCompanionTopicComment" >
+    insert into companion_topic_comment (user_id, content,companion_topic_id, is_del, type, create_time,by_reply_id,by_reply_content)
+    values ( #{userId}, #{content},#{companionTopicId},0, #{type}, now(),#{byReplyId},#{byReplyContent})
+  </insert>
+  
+  
+   <insert id="saveCompanionTopicView" >
+    insert into companion_topic_view (user_id,companion_topic_id, is_del, create_time)
+    values ( #{userId},#{companionTopicId},0, now())
+  </insert>
+  
+   <select id="isCompanionTopicView" resultType="java.lang.Boolean" >
+    select 
+   		if(count(ctv.id)==0,0,1)
+    from companion_topic_view ctv
+    where ctv.user_id = #{userId} and ctv.companion_topic_id = #{companionTopicId}
+  </select>
+  
+   <select id="getById" resultType="tech.youmu.ckl.domain.CompanionTopic">
+    select id, title, user_id userId, start_time startTime, end_time endTime, route_id routeId, top, permission,content
+    from companion_topic
+    where id = #{id} and is_del =0
+  </select>
+</mapper>

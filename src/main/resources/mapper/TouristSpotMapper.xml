@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 景点的mapper -->
+<mapper namespace="tech.youmu.ckl.mapper.TouristSpotMapper">
+  <resultMap id="BaseResultMap" type="Station" autoMapping="true">
+  	<id column="id" property="id"/>
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="district_address"  property="districtAddress" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+    <collection property="imgs" ofType="java.lang.String">
+    	<result column="iurl"/>
+    </collection>
+  </resultMap>
+  
+  <insert id="save" parameterType="Station" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+  	INSERT INTO station (
+		`name`,
+		`intro`,
+		address,
+		district_address,
+		district_code,
+		latitude,
+		longtitude,
+		type,
+		create_time
+	)
+	VALUES
+	(
+		#{name},
+		#{intro},
+		#{address},
+		#{districtAddress},
+		#{district.code},
+		#{latitude},
+		#{longtitude},
+		1,
+		now()
+	)
+  </insert>
+  
+  <update id="updateById" parameterType="Station">
+  	UPDATE station
+  	<set>
+  		<if test="name != null">
+		 `name` = #{name},
+  		</if>
+  		<if test="intro != null">
+		 `intro` = #{intro},
+  		</if>
+  		<if test="address != null">
+		 `address` = #{address},
+  		</if>
+  		<if test="districtAddress != null">
+		 `district_address` = #{districtAddress},
+  		</if>
+  		<if test="latitude != null">
+		 `latitude` = #{latitude},
+  		</if>
+  		<if test="longtitude != null">
+		 `longtitude` = #{longtitude},
+  		</if>
+  		<if test="district != null and district.code != null">
+			district_code=#{district.code},
+		</if>
+  	</set>
+	WHERE
+		id = #{id}
+	AND is_del = 0
+	AND type = 1
+  </update>
+  
+  <update id="deleteById" parameterType="long">
+  	UPDATE station
+	SET is_del = 1
+	WHERE
+		id = #{id}
+	AND is_del = 0
+	AND type = 1
+  </update>
+  
+  <resultMap id="EditResultMap" type="Station" autoMapping="true">
+  	<id column="id" property="id"/>
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="district_address"  property="districtAddress" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+    <association property="district"  javaType="District" select="tech.youmu.ckl.mapper.AddressMapper.getDistrict" column="district_code">
+    </association>
+  </resultMap>
+  
+   <select id="getById" parameterType="long" resultMap="EditResultMap">
+	SELECT
+		s.id,
+		s.`name`,
+		s.intro,
+		s.`status`,
+		s.address,
+		s.district_code,
+		s.create_time createTime
+	FROM
+		station s
+	WHERE 
+		s.id = #{id}
+  </select> 
+  
+  
+  <sql id="whereSql">
+  	<where>
+	  		type = 1
+		AND is_del = 0
+		<if test="startTime != null">
+			and create_time >= #{startTime}
+		</if>
+		<if test="endTime != null">
+			and create_time &lt;= #{startTime}
+		</if>
+		<if test="keyword != null">
+			and name like concat('%', #{keyword}, '%')
+		</if>
+  	</where>
+  </sql>
+  
+  	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+  
+  <select id="getCountByQuery" parameterType="StationQuery" resultType="long">
+  	SELECT
+		count(DISTINCT id)
+	FROM
+		station
+	<include refid="whereSql" />
+  </select>
+  
+  <select id="getByQuery" parameterType="StationQuery" resultMap="BaseResultMap">
+	SELECT
+		s.id,
+		s.`name`,
+		s.intro,
+		s.`status`,
+		s.create_time,
+		s.address,
+		s.district_address,
+		i.url iurl
+	FROM
+		(
+			select * from station 
+			<include refid="whereSql" />
+			<include refid="pageSql" />
+		) s
+	LEFT JOIN station_images i ON i.station_id = s.id AND i.is_del = 0
+	ORDER BY s.create_time DESC
+  </select> 
+  
+  <insert id="saveImgsUrls">
+	  insert into station_images 
+	 (station_id, url, create_time)
+	 values
+	 <foreach collection="list" item="item" separator=",">
+	 	(#{stationId}, #{item}, now())
+	 </foreach>
+  </insert>
+  
+  <update id="deleteImgsUrls" parameterType="long">
+	 update station_images 
+	 set is_del = 1
+	 where id = #{id}
+  </update>
+  
+  <select id="getRepeatCount" resultType="int" parameterType="Station">
+  	select count(id) from station where type = 1 and is_del = 0 and name = #{name}
+  	<if test="id != null">
+  		and id != #{id}
+  	</if>
+  </select>
+ 
+</mapper>

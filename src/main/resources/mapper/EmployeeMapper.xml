@@ -1,0 +1,639 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.EmployeeMapper">
+
+
+	<resultMap id="EmployeeMap" type="Employee">
+		<id column="id" property="id"/>
+		<result column="mobile" property="mobile" />
+		<result column="password" property="password" />
+		<result column="real_name" property="realName"></result>
+		<result column="emp_number" property="empNumber" />
+		<result column="sex" property="sex" />
+		<result column="status" property="status" />
+		<result column="last_ip" property="lastIP" />
+		<result column="last_visit" property="lastVisit" />
+		<result column="salary_level" property="salaryLevel" />
+		<result column="order_id" property="orderId" />
+		<result column="station_id" property="stationId" />
+		<result column="salary_in_count" property="salaryInCount" />
+		<result column="perf_in_count" property="perfInCount" />
+		<result column="num_in_count" property="numInCount" />
+		<result column="ke_in_count" property="keInCount" />
+		
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 职称 -->
+		<association property="jobTitle" column="job_id" javaType="JobTitle">
+			<id column="jid" property="id" />
+			<result column="jname" property="name" />
+			<result column="jratio" property="ratio" />
+		</association>
+		<!-- 角色 -->
+		<association property="role" column="role_id" javaType="SysRole">
+			<id column="rid" property="id" />
+			<result column="rname" property="name" />
+		</association>
+		<!-- 所属服务站 -->
+		<association property="station" column="station_id" javaType="Station">
+			<id column="sid" property="id" />
+			<result column="sname" property="name" />
+		</association>
+		
+	</resultMap>
+	
+	<!-- 添加一个员工 -->
+	<insert id="save" parameterType="Employee">
+		insert into `employee` 
+		(mobile
+		,password
+		,real_name
+		,emp_number
+		,status
+		,sex
+		,last_ip
+		,last_visit
+		,role_id
+		,station_id
+		,job_id
+		,create_time
+		,modify_time
+		,salary_in_count
+		,perf_in_count
+		,num_in_count
+		,ke_in_count
+		,salary_level
+		) 
+		values
+		(#{mobile}
+		,#{password}
+		,#{realName}
+		,#{empNumber}
+		,#{status}
+		,#{sex}
+		,#{lastIP}
+		,#{lastVisit}
+		,#{role.id}
+		,#{station.id}
+		,#{jobTitle.id}
+		,#{createTime}
+		,now()
+		,#{salaryInCount}
+		,#{perfInCount}
+		,#{numInCount}
+		,#{keInCount}
+		,#{salaryLevel}
+		)
+	</insert>
+	
+	<!-- 删除一个员工 -->
+	<delete id="delById" parameterType="long">
+		update employee
+	    set 
+	    	is_del = 1,
+	    	modify_time=now()
+	    where id = #{id}
+	</delete>
+	
+	<!-- 禁用一个员工 -->
+	<update id="disableByEmpId" parameterType="long">
+		update `employee` 
+		set 
+			status=-1
+			,modify_time=now()
+		where id=#{id} and  status != -1
+	</update>
+	
+	<!-- 启用一个员工 -->
+	<update id="invokeByEmpId" parameterType="long">
+		update `employee` 
+		set status=0,
+			modify_time=now()
+		where id=#{id} and  status != 0
+	</update>
+	
+	<!--通过id来修改员工  -->
+	<update id="updateById" parameterType="Employee">
+		update 
+		`employee` 
+		set 
+		mobile=#{mobile}
+		,real_name=#{realName}
+		,emp_number=#{empNumber}
+		,status=#{status} 
+		,sex=#{sex}
+		,last_ip=#{lastIP}
+		,last_visit=#{lastVisit}
+		,job_id=#{jobTitle.id}
+		,role_id=#{role.id}
+		,station_id=#{station.id}
+		,modify_time=now()
+		,salary_in_count=#{salaryInCount}
+		,perf_in_count=#{perfInCount}
+		,ke_in_count=#{keInCount}
+		,num_in_count=#{numInCount}
+		,salary_level=#{salaryLevel}
+		where id=#{id}
+	</update>
+	
+	<!-- 通过id查询员工对象 -->
+	<select id="getById" parameterType="long" resultMap="EmployeeMap">
+		select 
+		e.* 
+		,s.id sid
+		,s.name sname
+		,job.id jid
+		,job.name jname
+		,job.ratio jratio
+		,r.id rid
+		,r.name rname
+		from `employee` e
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		left join sys_role r 
+			on e.role_id = r.id and r.is_del = 0
+		where e.id=#{id} and e.is_del = 0 
+	</select>
+	
+	
+	
+	<!-- 查询所有的员工对象 -->
+	<select id="getAll" resultType="Employee">
+		select * from `employee` e where e.is_del = 0
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<!-- 关键词：员工账号或昵称或真实姓名 -->
+			<if test="keywords!=null and keywords!=''">
+			(
+				e.mobile like concat('%',#{keywords},'%') 
+				or 
+				e.real_name like concat('%',#{keywords},'%')
+				or
+				job.name like concat('%',#{keywords},'%')
+			)
+			</if>
+			<if test="status!=null">
+				AND e.status = #{status}
+			</if>
+			<if test="beginTime != null ">
+				AND e.create_time >= #{beginTime}
+			</if>
+			<if test="endTime != null">
+				AND e.create_time &lt;= #{endTime}
+			</if>
+			<if test="roleId!=null">
+				AND e.role_id = #{roleId}
+			</if>
+			<if test="roleNotNull != null">
+				and e.role_id is not null
+			</if>
+			<if test="stationId!=null">
+				AND e.station_id = #{stationId}
+			</if>
+			AND e.is_del = 0 
+		</where>
+	</sql>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 登录验证 -->
+	<select id="checkEmpLogin" parameterType="String" resultMap="EmployeeMap">
+		select * from `employee` e where mobile=#{mobile} AND e.is_del = 0
+	</select>
+	
+	<!-- 分页sql -->
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="EmployeeQuery" resultMap="updateEmployeeStationResultMap">
+		select
+		e.* 
+		,s.id sid
+		,s.name sname
+		,stationToRef.id staId
+		,stationToRef.name staName
+		,job.id jid
+		,job.name jname
+		,job.ratio jratio
+		,r.id rid
+		,r.name rname
+		from 
+		(
+			select * from employee
+			<include refid="pageSql" />
+		) e
+		
+		left join employee_station_ref esf
+			on e.id = esf.employee_id and esf.is_del = 0
+		left join station stationToRef
+			on stationToRef.id = esf.station_id and stationToRef.is_del = 0
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		left join sys_role r 
+			on e.role_id = r.id and r.is_del = 0
+		
+		<include refid="whereSql"></include>
+		
+		<include refid="orderSql" />
+		
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="EmployeeQuery" resultType="long">
+		select count(e.id) from `employee` e
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		left join sys_role r 
+			on e.role_id = r.id and r.is_del = 0 
+		<include refid="whereSql"></include>
+	</select>
+	
+	<resultMap id="EmployeeRoleMap" type="Employee">
+		<id column="id" property="id"/>
+		<result column="mobile" property="mobile" />
+		<result column="real_name" property="realName"></result>
+		<result column="status" property="status" />
+		<result column="is_del" property="isDel" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<!-- 角色 -->
+		<association property="role" javaType="SysRole">
+			<!-- productdir的映射关系 -->
+			<id column="rid" property="id" />
+			<result column="rname" property="name" />
+			
+			<collection ofType="SysMenu" property="menus">
+			  	<id column="mid" property="id"/>
+			  	<result column="name" property="name"/>
+	  		</collection>
+		</association>
+	</resultMap>
+	
+	<select id="getRoleMenusById" resultMap="EmployeeRoleMap">
+		select 
+		r.id rid
+		,m.id mid
+		from
+		employee e
+		left join sys_role r 
+			on e.role_id = r.id and r.is_del = 0
+		left join role_menu_ref rm 
+	 		on r.id = rm.role_id and rm.is_del = 0
+	 	left join sys_menu m 
+			 on m.id = rm.menu_id and m.is_del = 0
+		where m.id = #{menuId} and e.id = #{employeeId}
+	</select>
+	
+	<select id="getRoleMenusInfo" resultMap="EmployeeRoleMap">
+		select 
+				e.id
+				,r.id rid
+				,m.id mid
+			from
+			employee e
+			left join sys_role r 
+				on e.role_id = r.id and r.is_del = 0
+			left join role_menu_ref rm 
+		 		on r.id = rm.role_id and rm.is_del = 0
+		 	left join sys_menu m 
+		 		on m.id = rm.menu_id and m.is_del = 0
+	</select>
+	
+	<select id="getByPhoneNumber" resultType="Employee">
+		select 
+			e.id,e.password,e.status
+		from employee e
+		where e.mobile=#{mobile} and e.is_del = 0
+	</select>
+	
+	<select id="getEmployeeInfoByUserId" resultType="Employee">
+		select 
+			e.real_name realName,e.head_icon headIcon
+		from employee e
+		where e.id=#{employeeId} and e.is_del = 0
+	</select>
+	
+	<select id="getEmployeeInfoById" resultMap="EmployeeMap">
+		select 
+		e.* 
+		,s.id sid
+		,s.name sname
+		,job.id jid
+		,job.name jname
+		,r.id rid
+		,r.name rname
+		
+		from `employee` e
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		left join sys_role r 
+			on e.role_id = r.id and r.is_del = 0
+			
+		where e.id=#{employeeId} and e.is_del = 0
+		
+		GROUP BY e.id
+	</select>
+	
+	<select id="findAvgStarByOrder" resultType="tech.youmu.ckl.domain.Employee">
+		select 
+			avg(se.star) avgStar,o.emp_id id
+		from `order` o
+		left join service_evaluation se on se.order_id = o.id
+		group by emp_id
+	</select>
+	
+	<update id="batchUpdateEmployeeAvgStar">  
+	    <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+	        update employee
+	        <set>
+	            avg_star=#{item.avgStar},
+	        </set>
+	        where id = #{item.id}
+	    </foreach>      
+	</update>
+	
+	<select id="findEmployeeByMobileOrNum" resultType="Employee">
+		select * from employee where emp_number = #{empNumber} or mobile = #{mobile} and is_del = 0
+	</select>
+	
+		
+		
+	
+  <resultMap type="Employee" id="updateEmployeeStationResultMap">
+		<id column="id" property="id"/>
+		<result column="mobile" property="mobile" />
+		<result column="password" property="password" />
+		<result column="real_name" property="realName"></result>
+		<result column="emp_number" property="empNumber" />
+		<result column="sex" property="sex" />
+		<result column="status" property="status" />
+		<result column="last_ip" property="lastIP" />
+		<result column="last_visit" property="lastVisit" />
+		<result column="salary_level" property="salaryLevel" />
+		
+		<result column="salary_in_count" property="salaryInCount" />
+		<result column="perf_in_count" property="perfInCount" />
+		<result column="num_in_count" property="numInCount" />
+		<result column="ke_in_count" property="keInCount" />
+		
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 职称 -->
+		<association property="jobTitle" column="job_id" javaType="JobTitle">
+			<id column="jid" property="id" />
+			<result column="jname" property="name" />
+			<result column="jratio" property="ratio" />
+		</association>
+		<!-- 角色 -->
+		<association property="role" column="role_id" javaType="SysRole">
+			<id column="rid" property="id" />
+			<result column="rname" property="name" />
+		</association>
+		<!-- 所属服务站 -->
+		<association property="station" column="station_id" javaType="Station">
+			<id column="sid" property="id" />
+			<result column="sname" property="name" />
+		</association>
+		
+	  	<collection ofType="Station" property="stations">
+		  	<id column="staId" property="id"/>
+		  	<result column="staName" property="name"/>
+	  	</collection>
+	  	
+  </resultMap>
+  
+  <insert id="saveEmployeeStations" parameterType="Employee">
+    insert into employee_station_ref
+	    (
+		    employee_id, 
+		    station_id, 
+		    create_time
+	    ) 
+    values
+     <foreach collection="stations"  item="station" separator=",">
+            (#{id}, #{station.id}, now())
+     </foreach>
+  </insert>
+	
+  <delete id="deleteEmployeeStationsById" parameterType="Employee">
+    update employee_station_ref
+    set is_del = 1
+    where employee_id = #{id}
+  </delete>
+  
+	<insert id="saveAndGetId" parameterType="Employee" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+		insert into `employee` 
+		(mobile
+		,password
+		,real_name
+		,emp_number
+		,status
+		,sex
+		,last_ip
+		,last_visit
+		,dept_id
+		,role_id
+		,station_id
+		,job_id
+		,create_time
+		,modify_time
+		,salary_in_count
+		,perf_in_count
+		,num_in_count
+		,ke_in_count
+		,salary_level
+		) 
+		values
+		(#{mobile}
+		,#{password}
+		,#{realName}
+		,#{empNumber}
+		,#{status}
+		,#{sex}
+		,#{lastIP}
+		,#{lastVisit}
+		,#{dept.id}
+		,#{role.id}
+		,#{station.id}
+		,#{jobTitle.id}
+		,#{createTime}
+		,now()
+		,#{salaryInCount}
+		,#{perfInCount}
+		,#{numInCount}
+		,#{keInCount}
+		,#{salaryLevel}
+		)
+	</insert>
+	
+	<!-- 通过id查询员工对象 -->
+	<select id="getWithStationsById" parameterType="long" resultMap="updateEmployeeStationResultMap">
+		select 
+		e.* 
+		,s.id sid
+		,s.name sname
+		,stationToRef.id staId
+		,stationToRef.name staName
+		,job.id jid
+		,job.name jname
+		,job.ratio jratio
+		,r.id rid
+		,r.name rname
+		from `employee` e
+		left join employee_station_ref esf
+			on e.id = esf.employee_id and esf.is_del = 0
+		left join station stationToRef
+			on stationToRef.id = esf.station_id and stationToRef.is_del = 0
+		left join station s
+			on s.id = e.station_id and s.is_del = 0
+		left join job_title job
+			on job.id = e.job_id and job.is_del = 0
+		left join sys_role r 
+			on e.role_id = r.id and r.is_del = 0
+		
+		where e.id=#{id} and e.is_del = 0 
+	</select>
+	
+	
+	<select id="getEmployeeInfo" resultType="tech.youmu.ckl.app.vo.EmployeeInfo">
+		select 
+			e.mobile,e.real_name name,e.head_icon headIcon,jt.`name` jobName,
+			e.emp_number employeeNumber,s.name stationName,jt.type jobType
+		from employee e
+		LEFT JOIN job_title jt on jt.id = e.job_id and jt.is_del=0
+		left join station s on s.id = e.station_id
+		where e.id=#{employeeId} and e.is_del=0
+	</select>
+	
+	
+	<update id="update">
+    update employee
+    <set >
+    	modify_time = #{modifyTime},
+      <if test="mobile != null" >
+        mobile = #{mobile},
+      </if>
+      <if test="password != null" >
+        password = #{password},
+      </if>
+      <if test="realName != null" >
+        real_name = #{realName},
+      </if>
+      <if test="empNumber != null" >
+        emp_number = #{empNumber},
+      </if>
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="headIcon != null" >
+        head_icon = #{headIcon},
+      </if>
+      <if test="sex != null" >
+        sex = #{sex},
+      </if>
+      <if test="lastIP != null" >
+        last_ip = #{lastIP},
+      </if>
+      <if test="lastVisit != null" >
+        last_visit = #{lastVisit},
+      </if>
+      <if test="deptId != null" >
+        dept_id = #{deptId},
+      </if>
+      <if test="roleId != null" >
+        role_id = #{roleId},
+      </if>
+       <if test="orderId != null" >
+        order_id = #{orderId},
+      </if>
+      <if test="stationId != null" >
+        station_id = #{stationId},
+      </if>
+      <if test="jobId != null" >
+        job_id = #{jobId},
+      </if>
+      <if test="salaryLevel != null" >
+        salary_level = #{salaryLevel},
+      </if>
+      <if test="avgStar != null" >
+        avg_star = #{avgStar},
+      </if>
+      <if test="keInCount != null" >
+        ke_in_count = #{keInCount},
+      </if>
+      <if test="perfInCount != null" >
+        perf_in_count = #{perfInCount},
+      </if>
+      <if test="numInCount != null" >
+        num_in_count = #{numInCount},
+      </if>
+      <if test="salaryInCount != null" >
+        salary_in_count = #{salaryInCount},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+        
+    </set>
+    where id = #{id}
+  </update>
+  
+  <update id="setEmployeeOrderId">
+    update employee
+    <set >
+    	modify_time = now(),
+        order_id = #{orderId},
+        <if test="numInCount !=null">
+       		num_in_count = #{numInCount}
+        </if>
+    </set>
+    where id = #{empId}
+  </update>
+
+	<select id="findEmployeesByJobType" parameterType="int" resultType="Employee">
+		select 
+		e.id,
+		e.real_name as realName
+		from employee e
+		left join job_title jt on jt.id = e.job_id and jt.is_del = 0
+		where jt.type = #{type}
+	</select>
+	
+	<select id="getReceiveOrderInfo" resultType="tech.youmu.ckl.app.vo.ReceiveOrderInfo">
+		select 
+		if(e.order_id is null,0,1) isReceiveOrder,
+		e.order_id orderId
+		from employee e
+		where e.id = #{employeeId}
+	</select>
+	
+</mapper>

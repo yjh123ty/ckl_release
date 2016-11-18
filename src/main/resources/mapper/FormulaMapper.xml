@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.FormulaMapper">
+
+	<resultMap id="FormulaMap" type="Formula">
+		<id column="id" property="id"/>
+		<result column="point_condition" property="pointCondition" />
+		<result column="bouns" property="bouns" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 职称 -->
+		<association property="jobTitle" column="job_id" javaType="JobTitle">
+			<id column="jid" property="id" />
+			<result column="jname" property="name" />
+			
+			<!-- 职称中的绩效公式 -->
+			<association property="dept" column="dept_id" javaType="Department">
+				<id column="did" property="id" />
+				<result column="dname" property="name" />
+			</association>
+			
+		</association>
+	</resultMap>
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="Formula">
+    insert into formula (job_id,bouns, create_time, point_condition,modify_time)
+    values (#{jobTitle.id},#{bouns}, #{createTime}, #{pointCondition},now())
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update formula
+    set 
+    	is_del = true
+    	,modify_time=now()
+    where id = #{id}
+  </delete>
+ 
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="Formula">
+    update formula
+    set job_id = #{jobTitle.id},
+      bouns = #{bouns},
+      point_condition = #{pointCondition},
+      modify_time=now()
+    where id = #{id}
+  </update>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="FormulaMap">
+    select 
+	   f.*
+	   ,job.id jid
+		,job.name jname
+		,d.id did
+		,d.name dname
+	from formula f
+		left join job_title job 
+			on job.id = f.job_id and job.is_del = 0
+		left join department d
+			on d.id = job.dept_id
+    where f.id = #{id} and f.is_del = 0  
+  </select>
+  
+	<!-- 获取所有绩效公式-->
+	<select id="getAll" resultMap="FormulaMap">
+		select * from formula where is_del = 0
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<!-- 关键词：用户账号或昵称或真实姓名 -->
+			<if test="keywords!=null and keywords!=''">
+				job.name like concat('%',#{keywords},'%') 
+			</if>
+			<if test="deptId!=null">
+				AND d.id = #{deptId}
+			</if>
+			<if test="jobId!=null">
+				AND j.id = #{jobId}
+			</if>
+			<if test="beginTime != null and beginTime !=''">
+				AND f.create_time >= #{beginTime}
+			</if>
+			<if test="endTime != null and endTime !=''">
+				AND f.create_time &lt;= #{endTime}
+			</if>
+			AND f.is_del = 0  
+		</where>
+	</sql>
+	
+	<!-- 根据职位和分数设置的查询条件 -->
+	<sql  id="salarySql">
+		<where>
+			<if test="jobId!=null">
+				AND j.id = #{jobId}
+			</if>
+			<if test="pointCondition!=null">
+				AND f.point_condition = #{pointCondition}
+			</if>
+			AND f.is_del = 0  
+		</where>
+	</sql>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="FormulaQuery" resultMap="FormulaMap">
+		select 
+		f.*
+		,job.id jid
+		,job.name jname
+		,d.id did
+		,d.name dname
+		from `formula` f
+		left join job_title job 
+			on job.id = f.job_id AND job.is_del = 0
+		left join department d
+			on d.id = job.dept_id AND d.is_del = 0
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="FormulaQuery" resultType="long">
+		select count(f.id) from formula f
+		left join job_title job 
+			on job.id = f.job_id AND job.is_del = 0
+		left join department d
+			on d.id = job.dept_id AND d.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<!-- 通过查询条件获取相关的绩效公式 -->
+  <select id="getInfoByQuery" parameterType="FormulaQuery" resultMap="FormulaMap">
+    select 
+	    f.*
+	   ,j.id jid
+	from formula f
+	left join job_title j 
+			on j.id = f.job_id AND j.is_del = 0 
+	<include refid="salarySql"></include>
+  </select>
+</mapper>

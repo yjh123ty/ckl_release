@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.ServiceEvaluationDetailMapper" >
+
+  <resultMap id="ServiceEvaluationDetailMap" type="ServiceEvaluationDetail" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="name" property="name" />
+    <result column="star" property="star"/>
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="modify_time" property="modifyTime" jdbcType="TIMESTAMP" />
+    <result column="is_del" property="isDel"/>
+			
+	<!-- 订单 -->
+	<association property="order" column="order_id" javaType="Order">
+		<result column="oid" property="id" />
+	</association>
+	
+  </resultMap>
+  
+  <delete id="deleteById" parameterType="java.lang.Long" >
+    update service_evaluation_detail 
+    	set is_del = true
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+  <insert id="save" parameterType="ServiceEvaluationDetail" >
+    insert into service_evaluation_detail sedetail 
+    (	
+	     name
+	    ,order_id
+	    ,star
+	    ,create_time
+	    ,modify_time
+	    ,is_del
+    )
+    values 
+    (
+     #{name}
+    , #{order.id}
+    , #{star}
+    , #{createTime}
+    , #{modifyTime}
+    , #{isDel}
+      )
+  </insert>
+  
+  <update id="updateById" parameterType="ServiceEvaluationDetail">
+    update service_evaluation_detail sedetail
+    	set sedetail.star = #{star}
+    where sedetail.id = #{id}
+  </update>
+  
+  <select id="getAll" resultMap="ServiceEvaluationDetailMap">
+  	select * from service_evaluation_detail
+  </select>
+  
+  <select id="getListByOrderId" resultMap="ServiceEvaluationDetailMap" parameterType="long">
+  	select 
+		    sedetail.*
+			,o.id oid
+	    from service_evaluation_detail sedetail
+	    left join `order` o
+	    	on sedetail.order_id = o.id
+    where o.id = #{orderId} AND o.is_del = 0 AND sedetail.is_del = 0
+  </select>
+  
+  
+   <insert id="batchSaveServiceEvaluationDetail">
+	insert into service_evaluation_detail (name,order_id,star,create_time,is_del)
+	values
+	<foreach collection="list" item="item" index="index" separator=",">
+		( #{item.name},#{orderId},#{item.star},now(),0)
+	</foreach>
+  </insert>
+  
+</mapper>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.HotelRoomMapper">
+	<resultMap type="tech.youmu.ckl.domain.HotelRoom" id="BaseResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+	    <result column="bed_type_name"  property="bedTypeName" />
+	    <result column="bed_type_id"  property="bedTypeId" />
+	    <result column="hotel_id"  property="hotelId" />
+	    <result column="total_num"  property="totalNum" />
+	    <result column="modify_time"  property="modifyTime" />
+	    <result column="create_time"  property="createTime" />
+	    <result column="cover"  property="cover" />
+		<association property="hotel" javaType="Hotel">
+			<id column="h_id" property="id"/>
+			<result column="h_name"  property="name" />
+		    <result column="station_id"  property="stationId" />
+		    <result column="district_address"  property="districtAddress" />
+		    <result column="address"  property="address" />
+		    <result column="mobile"  property="mobile" />
+		    <result column="intro"  property="intro" />
+		    <result column="stars"  property="stars" />
+		    <result column="is_del"  property="isDel" />
+		    <result column="h_create_time"  property="createTime" />
+		    <result column="h_modify_time"  property="modifyTime" />
+		</association>
+	</resultMap>
+	
+	<insert id="save" parameterType="HotelRoom" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+		insert into hotel_room
+		(
+			name ,
+			price ,
+			bed_type_name ,
+			bed_type_id ,
+			total_num,
+			size ,
+			hotel_id,
+			cover,
+			create_time 
+		)
+		values(
+			#{name},
+			#{price},
+			#{bedTypeName},
+			#{bedTypeId},
+			#{totalNum},
+			#{size},
+			#{hotel.id},
+			#{cover},
+			now()
+		)
+	</insert>
+	
+	<insert id="saveImgsUrls">
+		insert into hotel_room_images
+			(hotel_room_id, url, create_time)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(#{roomId},#{item},now())			
+		</foreach>
+	</insert>
+	
+	<update id="deleteImgsUrlsByHotelRoomId" parameterType="long">
+		update hotel_room_images
+		set is_del = 1
+		where id = #{id}
+	</update>
+	
+	<update id="update" parameterType="HotelRoom">
+		update hotel_room
+		<set>
+			<if test="name != null">
+				name =#{name},
+			</if>
+			<if test="price != null">
+				price =#{price},
+			</if>
+			<if test="bedTypeName != null">
+				bed_type_name =#{bedTypeName},
+			</if>
+			<if test="bedTypeId != null">
+				bed_type_id =#{bedTypeId},
+			</if>
+			<if test="totalNum != null">
+				total_num =#{totalNum},
+			</if>
+			<if test="size != null">
+				size =#{size},
+			</if>
+			<if test="hotel != null and hotel.id != null">
+				hotel_id =#{hotel.id},
+			</if>
+			<if test="cover != null">
+				cover = #{cover}
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<update id="delete" parameterType="long">
+		update hotel_room
+		set is_del = 1
+		where id = #{id}
+	</update>
+	
+	<select id="getHotelRooms" resultMap="BaseResultMap">
+		select
+			id ,
+			name ,
+			price ,
+			bed_type_name ,
+			bed_type_id ,
+			total_num,
+			size ,
+			create_time,
+			is_del
+		from  hotel_room
+		where hotel_id =#{id} and is_del = 0
+	</select>
+	
+   <select id="getHotelRoomById"  resultMap="BaseResultMap">
+    select 
+    	hr.id, hr.name,hr.cover, hr.price,hr.bed_type_name, hr.bed_type_id, hr.hotel_id, hr.total_num, hr.size, hr.modify_time, hr.create_time,
+			h.id h_id,h.address,h.create_time h_create_time,h.modify_time h_modify_time,h.district_code,h.district_address,h.intro,h.mobile,h.name h_name,h.stars,h.station_id
+    from hotel_room hr
+    left join hotel h on h.id = hr.hotel_id and h.is_del =0 
+    where hr.id = #{id} and hr.is_del =0
+  </select>
+  
+  <select id="getAll" resultType="HotelRoom">
+  	select
+			id ,
+			name ,
+			price ,
+			bed_type_name as bedTypeName,
+			bed_type_id as bedTypeId,
+			total_num as totalNum,
+			size
+		from  hotel_room
+		where is_del = 0
+  </select>
+
+	<select id="getRepeatCount" parameterType="HotelRoom" resultType="int">
+		select count(id) from hotel_room 
+		where name = #{name} and is_del = 0
+		<if test="id != null">
+			and id!=#{id}
+		</if>
+	</select>
+	
+</mapper>

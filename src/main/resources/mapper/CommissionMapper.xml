@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CommissionMapper" >
+
+  <select id="getLastMonthTotalCommission" resultType="java.lang.Double" >
+     select if(SUM(cd.amount) is null,0,SUM(cd.amount)) from commission_detail cd
+	 where cd.user_id =#{userId} and cd.is_del =0 and date_format(cd.create_time,'%Y-%m')=#{lastMonth}
+  </select>
+  
+  <select id="getLastMonthTotalPoint" resultType="java.lang.Double" >
+     select if(SUM(cpd.point_count) is null,0,SUM(cpd.point_count)) from commission_point_detail cpd
+	 where cpd.user_id =#{userId} and cpd.is_del =0 and date_format(cpd.create_time,'%Y-%m')=#{lastMonth}
+  </select>
+  
+  <select id="getYearTotalCommission" resultType="java.lang.Double" >
+     select if(SUM(cd.amount) is null,0,SUM(cd.amount)) from commission_detail cd
+	 where cd.user_id =#{userId} and cd.is_del =0 and date_format(cd.create_time,'%Y')=#{year}
+  </select>
+  
+  
+  <resultMap type="tech.youmu.ckl.app.vo.CommissionPointMonthInfo" id="commissionPointMonthInfoMap">  
+        <result column="month" property="month"/>  
+        <collection property="commissionPointDetailInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.CommissionPointDetailInfo" >
+          <result column="rechargeUserMobile" property="rechargeUserMobile"/> 
+          <result column="rechargeComboName" property="rechargeComboName"/> 
+          <result column="pointCount" property="pointCount"/> 
+          <result column="status" property="status"/> 
+          <result column="time" property="time"/> 
+        </collection>  
+    </resultMap>
+  <select id="findCommissionPointMonthInfo" resultMap="commissionPointMonthInfoMap">
+      select 
+    	if(DATE_FORMAT(cpd.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(cpd.create_time, '%m月'),DATE_FORMAT(cpd.create_time, '%Y年%m月'))  `month`,
+		DATE_FORMAT(cpd.create_time, '%d %H:%i')  time,
+		cpd.recharge_user_mobile rechargeUserMobile,cpd.recharge_combo_name rechargeComboName,cpd.point_count pointCount,cpd.status
+    from commission_point_detail cpd
+    where cpd.user_id = #{userId} and cpd.is_del =0 
+  </select>
+  
+  
+  <resultMap type="tech.youmu.ckl.app.vo.CommissionMonthInfo" id="commissionMonthInfoMap">  
+        <result column="month" property="month"/>  
+        <collection property="commissionDetailInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.CommissionDetailInfo" >
+          <result column="describe" property="describe"/> 
+          <result column="source" property="source"/> 
+          <result column="amount" property="amount"/> 
+          <result column="status" property="status"/> 
+          <result column="time" property="time"/> 
+        </collection>  
+    </resultMap>
+  <select id="findCommissionMonthInfo" resultMap="commissionMonthInfoMap">
+      select 
+    	if(DATE_FORMAT(cd.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(cd.create_time, '%m月'),DATE_FORMAT(cd.create_time, '%Y年%m月'))  `month`,
+		DATE_FORMAT(cd.create_time, '%d %H:%i')  time,
+		cd.describe `describe`,cd.source source,cd.amount amount,cd.status
+    from commission_detail cd
+    where cd.user_id = #{userId} and cd.is_del =0 
+  </select>
+  
+  
+  <resultMap type="tech.youmu.ckl.app.vo.CommissionYearInfo" id="commissionYearInfoMap">  
+        <result column="year" property="year"/>  
+        <collection property="commissionYearDetailInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.CommissionYearDetailInfo" >
+          <result column="amount" property="amount"/> 
+          <result column="time" property="time"/> 
+        </collection>  
+    </resultMap>
+  <select id="findCommissionYearInfo" resultMap="commissionYearInfoMap">
+      select 
+    	DATE_FORMAT(cd.create_time, '%Y年')  `year`,
+		DATE_FORMAT(cd.create_time, '%Y年%m月')  time,
+		sum(cd.amount) amount
+	    from commission_detail cd
+	    where cd.user_id = #{userId} and cd.is_del =0 
+		GROUP BY time
+  </select>
+  
+  <insert id="saveCommissionDetail" >
+    insert into commission_detail ( user_id, recharge_user_id, 
+      type, `describe`, source, 
+      amount, status, is_del, 
+      create_time)
+    values ( #{userId}, #{rechargeUserId}, 
+      #{type}, #{describe}, #{source}, 
+      #{amount}, #{status},0, 
+      now())
+  </insert>
+  <insert id="saveBatchCommissionPointDetail">
+    insert into commission_point_detail (user_id, recharge_user_mobile, 
+      user_bill_id, recharge_combo_name, is_balance, 
+      point_count, status, is_del, 
+      create_time)values 
+    <foreach collection="list" item="item" index="index" separator=",">
+	    (#{item.userId}, #{item.rechargeUserMobile}, 
+	      #{item.userBillId}, #{item.rechargeComboName}, #{item.isBalance}, 
+	      #{item.pointCount}, #{item.status}, 0, 
+	      now())
+    </foreach>
+  </insert>
+  <update id="updateCommissionPointDetail" >
+    update commission_point_detail
+    <set >
+      modify_time = now(),
+      <if test="userId != null" >
+        user_id = #{userId},
+      </if>
+      <if test="rechargeUserMobile != null" >
+        recharge_user_mobile = #{rechargeUserMobile},
+      </if>
+      <if test="userBillId != null" >
+        user_bill_id = #{userBillId},
+      </if>
+      <if test="rechargeComboName != null" >
+        recharge_combo_name = #{rechargeComboName},
+      </if>
+      <if test="isBalance != null" >
+        is_balance = #{isBalance},
+      </if>
+      <if test="pointCount != null" >
+        point_count = #{pointCount},
+      </if>
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  
+  <select id="findCountTotalCommissionByQuery" resultType="long">
+  	 select 
+   		count(distinct u.id)
+	    from commission_detail cd
+	    left join user u on u.id = cd.user_id and u.is_del = 0
+	    <where>
+	    	<if test="beginTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') >= #{beginTimeStr}
+	    	</if>
+	    	<if test="endTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') &lt;= #{endTimeStr}
+	    	</if>
+	    	<if test="keyword != null">
+	    		u.nick_name like concat('%',#{keyword},'%')
+	    	</if>
+	    	and cd.is_del = 0
+	    </where>
+  </select>
+  
+  <select id="findTotalCommissionByQuery" resultType="UserCommission">
+  	 select 
+   		u.id as userId,
+   		u.nick_name as userNickName,
+   		u.mobile as userMobile,
+		sum(cd.amount) as totalCommisssion
+	    from commission_detail cd
+	    left join user u on u.id = cd.user_id and u.is_del = 0
+	    <where>
+	    	<if test="beginTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') >= #{beginTimeStr}
+	    	</if>
+	    	<if test="endTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') &lt;= #{endTimeStr}
+	    	</if>
+	    	<if test="keyword != null">
+	    		u.nick_name like concat('%',#{keyword},'%')
+	    	</if>
+	    	and cd.is_del = 0
+	    </where>
+	    <if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+  </select>
+  
+  <select id="findCountCommissionDetailByQuery" parameterType="CommissionQuery" resultType="long">
+  	select 
+   		count(distinct u.id)
+	    from commission_detail cd
+	    left join user u on u.id = cd.user_id and u.is_del = 0
+	    left join user ul on ul.id = cd.recharge_user_id and ul.is_del = 0
+	    <where>
+	    	<if test="beginTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') >= #{beginTimeStr}
+	    	</if>
+	    	<if test="endTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') &lt;= #{endTimeStr}
+	    	</if>
+	    	<if test="keyword != null">
+	    		and (
+	    			u.nick_name like concat('%',#{keyword},'%')
+	    			or
+	    			ul.nick_name like concat('%',#{keyword},'%')
+	    		)
+	    	</if>
+	    	and cd.is_del = 0
+	    </where>
+  </select>
+  
+  <select id="findCommissionDetailByQuery" parameterType="CommissionQuery" resultType="UserCommissionItem">
+   select 
+  		u.id as userId,
+   		u.nick_name as userNickName,
+   		u.mobile as userMobile,
+  		ul.id as rechargeUserId,
+   		ul.nick_name as rechargeUserNickName,
+   		ul.mobile as rechargeUserMobile,
+		cd.amount,
+		cd.type,
+		cd.create_time as createTime
+	    from commission_detail cd
+	    left join user u on u.id = cd.user_id and u.is_del = 0
+	    left join user ul on ul.id = cd.recharge_user_id and ul.is_del = 0
+	    <where>
+	    	<if test="beginTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') >= #{beginTimeStr}
+	    	</if>
+	    	<if test="endTimeStr != null">
+	    		and DATE_FORMAT(cd.create_time, '%Y-%m') &lt;= #{endTimeStr}
+	    	</if>
+	    	<if test="keyword != null">
+	    		and (
+	    			u.nick_name like concat('%',#{keyword},'%')
+	    			or
+	    			ul.nick_name like concat('%',#{keyword},'%')
+	    		)
+	    	</if>
+	    	and cd.is_del = 0
+	    </where>
+  </select>
+  
+  <select id="findLastMonthCommissionPointDetail" resultType="tech.youmu.ckl.domain.CommissionPointDetail" >
+     select cpd.id,cpd.user_id userId,SUM(cpd.point_count) pointCount from commission_point_detail cpd
+	 where DATE_FORMAT(cpd.create_time, '%Y-%m')=#{lastMonthOfToday} and cpd.is_balance=0
+	 GROUP BY cpd.user_id
+  </select>
+  
+  
+  <insert id="saveBatchCommissionDetail"  >
+     insert into commission_detail ( user_id, recharge_user_id, 
+      type, `describe`, source, 
+      amount, status, is_del, 
+      create_time)
+    values 
+    <foreach collection="list" item="item" index="index" separator=",">
+	    ( #{item.userId}, #{item.rechargeUserId}, 
+	      #{item.type}, #{item.describe}, #{item.source}, 
+	      #{item.amount}, #{item.status},0, 
+	      now())
+    </foreach>
+  </insert>
+  
+  <update id="updateCommissionPointIsBalanceByLastMonth" >
+    update commission_point_detail
+    <set >
+      modify_time = now(),is_balance = 1
+    </set>
+    where DATE_FORMAT(create_time, '%Y-%m')=#{lastMonth}
+  </update>
+</mapper>

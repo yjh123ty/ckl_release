@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="
+	http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context 
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx.xsd
+	">
+	
+	<!-- Spring主配置文件 -->
+	<!-- 测试Spring是否导入 -->
+	<bean id="date" class="java.util.Date" />
+	
+	<context:property-placeholder location="classpath:db.properties" ignore-resource-not-found="true" ignore-unresolvable="true"/>
+	<!-- Spring 集成 mybatis配置文件 -->
+	
+	<!-- 创建数据源 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="url" value="${db.url}"/>
+		<property name="driverClassName" value="${db.driverClassName}"/>
+		<property name="username" value="${db.username}"/>
+		<property name="password" value="${db.password}"/>
+		
+		<!--maxActive: 最大连接数量 -->
+		<property name="maxActive" value="${maxActive}" />
+		<!--minIdle: 最小空闲连接 -->
+		<property name="minIdle" value="${minIdle}" />
+		<!--maxIdle: 最大空闲连接 -->
+		<property name="maxIdle" value="${maxIdle}" />
+		<!--initialSize: 初始化连接 -->
+		<property name="initialSize" value="${initialSize}" />
+		<!-- 连接被泄露时是否打印 -->
+		<property name="logAbandoned" value="${logAbandoned}" />
+		<!--removeAbandoned: 是否自动回收超时连接 -->
+		<property name="removeAbandoned" value="${removeAbandoned}" />
+		<!--removeAbandonedTimeout: 超时时间(以秒数为单位) -->
+		<property name="removeAbandonedTimeout" value="${removeAbandonedTimeout}" />
+		<!--maxWait: 超时等待时间以毫秒为单位 1000等于60秒 -->
+		<property name="maxWait" value="${maxWait}" />
+		<!-- 在空闲连接回收器线程运行期间休眠的时间值,以毫秒为单位. -->
+		<property name="timeBetweenEvictionRunsMillis" value="${timeBetweenEvictionRunsMillis}" />
+		<!-- 在每次空闲连接回收器线程(如果有)运行时检查的连接数量 -->
+		<property name="numTestsPerEvictionRun" value="${numTestsPerEvictionRun}" />
+		<!-- 1000 * 60 * 30 连接在池中保持空闲而不被空闲连接回收器线程 -->
+		<property name="minEvictableIdleTimeMillis" value="${minEvictableIdleTimeMillis}" />
+		<property name="validationQuery" value="${validationQuery}" />
+		<property name="testWhileIdle" value="${testWhileIdle}" />
+		<property name="testOnBorrow" value="${testOnBorrow}" />
+		<property name="testOnReturn" value="${testOnReturn}" />
+		<property name="poolPreparedStatements" value="${poolPreparedStatements}" />
+	</bean>
+
+	<!-- 
+		session工厂创建bean 
+		Resource[] mapperLocations;
+		DataSource dataSource;
+		Properties configurationProperties;//暂时不需要
+		Class<?>[] typeAliases; //直接使用包
+		String typeAliasesPackage;
+	-->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 自动扫描 mapper包下的所有文件 -->
+		<property name="mapperLocations"  value="classpath*:/mapper/*Mapper.xml"/>
+		<property name="typeAliasesPackage" value="tech.youmu.ckl.domain,tech.youmu.ckl.query" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<!--
+		mapper生成  不使用 domain太多太麻烦 使用自动扫描生成mapper
+		找到spring-mybas mapper 该类的注释 
+		MapperScannerConfigurer 支 持 过 滤 由 指 定 的 创 建 接 口 或 注 解 创 建 映 射 器 。 
+		annotationClass 属性指定了要寻找的注解名称。 
+		markerInterface 属性指定了要寻找的父 接口。如果两者都被指定了,加入到接口中的映射器会匹配两种标准。
+		默认情况下,这两个 属性都是 null,所以在基包中给定的所有接口可以作为映射器加载。
+	-->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+		<!-- 扫描自动生成mapper的package -->
+        <property name="basePackage" value="tech.youmu.ckl.mapper" />
+   </bean>
+   
+   <!-- 配置事务的三点 事务管理器 ==> 事务的切入点 ==> 事务的运用时机 -->
+	<!-- 声明式事务管理 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+	<aop:config>
+		<!-- ..*该包下的所有子包 -->
+		<aop:pointcut expression="execution(* tech.youmu.ckl.service..*.*(..))" id="servicePointCut" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="servicePointCut" />
+	</aop:config>
+
+	<!--配置切点的事务处理详细 -->
+	<tx:advice transaction-manager="transactionManager" id="txAdvice">
+		<tx:attributes>
+			<tx:method name="get*" propagation="SUPPORTS" read-only="true"/>
+			<tx:method name="find*" propagation="SUPPORTS" read-only="true"/>
+			<tx:method name="*" propagation="REQUIRED" read-only="false"
+				rollback-for="java.lang.Exception" />
+		</tx:attributes>
+	</tx:advice>
+</beans>

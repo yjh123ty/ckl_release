@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.AdminTaskMapper">
+	
+	<insert id="save" parameterType="AdminTask">
+		INSERT INTO `admin_task` (
+			`employee_id`,
+			`url`,
+			`content`,
+			`type`,
+			`create_time`
+		)
+		VALUES (
+				#{employeeId},
+				#{url},
+				#{content},
+				#{type},
+				now()
+		)
+	</insert>
+	
+	<insert id="batchSave">
+		INSERT INTO `admin_task` (
+			`employee_id`,
+			`url`,
+			`content`,
+			`type`,
+			`create_time`
+		)
+		VALUES 
+		<foreach collection="adminTasks" item="item" separator=",">
+		(#{item.employeeId}, #{item.url},#{item.content},#{item.type}, now())
+		</foreach>
+	</insert>
+	
+	<insert id="handledTask">
+	UPDATE `admin_task`
+		SET
+		 `is_handle` = 1,
+		 `handle_employee_id`=#{employeeId},
+		 `handle_time` = now()
+		WHERE (`id` = #{id})
+	</insert>
+	
+	<select id="getAdminAllTask" parameterType="long" resultType="AdminTask">
+	SELECT
+		GROUP_CONCAT( distinct t.id) id,
+		t.employee_id employeeId,
+		t.url,
+		t.content,
+		t.type,
+		t.is_handle isHandle,
+		t.create_time createTime
+		from admin_task t
+		left join  sys_menu m on t.url = m.url and m.is_del = 0
+		left join role_menu_ref rm on rm.menu_id = m.id and rm.is_del = 0
+		left join sys_role r on r.id = rm.role_id and r.is_del = 0
+		left join employee e1 on e1.role_id = r.id and e1.is_del =0
+		left join employee e2 on e2.id = t.employee_id and e2.is_del = 0
+		where if(t.employee_id is not null, e2.id = #{id}, e1.id=#{id})  and t.is_del = 0 and t.is_handle = 0
+		GROUP BY t.id
+		order by t.type asc, t.create_time desc
+	</select>
+	
+	<select id="getTaskCount" parameterType="long" resultType="long">
+		select 
+		count(distinct t.id)
+		from admin_task t
+		left join  sys_menu m on t.url = m.url and m.is_del = 0
+		left join role_menu_ref rm on rm.menu_id = m.id and rm.is_del = 0
+		left join sys_role r on r.id = rm.role_id and r.is_del = 0
+		left join employee e1 on e1.role_id = r.id and e1.is_del =0
+		left join employee e2 on e2.id = t.employee_id and e2.is_del = 0
+		where if(t.employee_id is not null, e2.id = #{id}, e1.id=#{id}) and t.is_del = 0 and t.is_handle = 0
+	</select>
+	
+	<select id="getEmployeeIds" parameterType="string" resultType="long">
+		select 
+		e.id
+		from sys_menu m 
+		left join role_menu_ref rm on rm.menu_id = m.id and rm.is_del = 0
+		left join sys_role r on r.id = rm.role_id and r.is_del = 0
+		left join employee e on e.role_id = r.id and e.is_del =0
+		where m.url = #{url}
+	</select>
+	
+	<update id="deleteCarPartOldTask">
+		update admin_task set is_del = 1
+		where type = 3 and is_del != 1
+	</update>
+	
+</mapper>

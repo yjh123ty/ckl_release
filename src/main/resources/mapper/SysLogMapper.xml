@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.SysLogMapper">
+  <resultMap id="BaseResultMap" type="SysLog">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="opr_time" jdbcType="TIMESTAMP" property="oprTime" />
+    <result column="opr_user_mobile" jdbcType="VARCHAR" property="oprUserMobile" />
+    <result column="user_agent" jdbcType="VARCHAR" property="userAgent" />
+    <result column="request_uri" jdbcType="VARCHAR" property="requestUri" />
+    <result column="opr_user_ip" jdbcType="VARCHAR" property="oprUserIp" />
+    <result column="opr_name" jdbcType="VARCHAR" property="oprName" />
+    <result column="is_exception" jdbcType="BIT" property="isException" />
+    <result column="opr_detail" jdbcType="LONGVARCHAR" property="oprDetail" />
+  </resultMap>
+  <insert id="save" parameterType="SysLog">
+  	insert into sys_log
+  	(
+		opr_time,
+		opr_user_mobile, 
+		user_agent,
+		request_uri, 
+		opr_user_ip,
+		opr_name,
+		is_exception,
+		opr_detail
+  	)
+  	values
+  	(
+		#{oprTime},
+		#{oprUserMobile}, 
+		#{userAgent},
+		#{requestUri}, 
+		#{oprUserIp},
+		#{oprName},
+		#{isException},
+		#{oprDetail}
+  	)
+  </insert>
+</mapper>

@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.RouteMapper">
+
+  <resultMap id="BaseResultMap" type="Route" autoMapping="true">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="create_time" property="createTime" />
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+    
+    
+    <association property="createUser" javaType="Employee">
+    	<id column="eid" jdbcType="BIGINT" property="id" />
+    	<result column="ereal_name" jdbcType="VARCHAR" property="realName" />
+    </association>
+    
+    <!-- 该线路的模板 线路 -->
+    <association property="template" javaType="Route">
+    	<id column="tid" jdbcType="BIGINT" property="id" />
+	    <result column="tname" jdbcType="VARCHAR" property="name" />
+    </association>
+    
+    <collection property="stations" ofType="Station">
+    	<id column="sid" jdbcType="BIGINT" property="id" />
+	    <result column="sname" jdbcType="VARCHAR" property="name" />
+	    <result column="slatitude" jdbcType="VARCHAR" property="latitude" />
+	    <result column="slongtitude" jdbcType="VARCHAR" property="longtitude" />
+	    <result column="rsorder" jdbcType="INTEGER" property="order" />
+	    <result column="rsdistance" jdbcType="INTEGER" property="distance" />
+    </collection>
+    
+    <collection property="suits" ofType="RouteSuit">
+    	<id column="suitid" property="id"/>
+    	<result column="suitname" property="name"/>
+    	<result column="suittype" property="type"/>
+    </collection>
+    
+    <collection property="suitNames" ofType="java.lang.String">
+    	<result column="suitname" />
+    </collection>
+  </resultMap>
+  
+  <resultMap id="SimpleResultMap" type="Route" autoMapping="true">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+    
+    <collection property="stations" ofType="Station">
+    	<id column="sid" jdbcType="BIGINT" property="id" />
+	    <result column="sname" jdbcType="VARCHAR" property="name" />
+	    <result column="slatitude" jdbcType="VARCHAR" property="latitude" />
+	    <result column="slongtitude" jdbcType="VARCHAR" property="longtitude" />
+	    <result column="rsorder" jdbcType="INTEGER" property="order" />
+	    <result column="rsdistance" jdbcType="INTEGER" property="distance" />
+    </collection>
+    
+  </resultMap>
+  
+  <sql id="saveSql">
+  	insert into route(
+  			name,
+			img,
+			days,
+			distance,
+			cost,			
+			intro,
+			create_time,
+			create_user_id,
+			template_id
+  		)
+  		values(
+  			#{name},
+			#{img},
+			#{days},
+			#{distance},
+			#{cost},
+			#{intro},
+			now(),
+			#{createUser.id},
+			#{template.id}
+  		)
+  </sql>
+  
+  <!-- 添加一条路线 -->
+  <insert id="save" parameterType="Route">
+  		<include refid="saveSql"></include>
+  </insert>
+  
+  <!-- 添加一条路线 -->
+  <insert id="saveAndGetId" parameterType="Route" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+  		<include refid="saveSql"></include>
+  </insert>
+  
+  <!-- 添加一条路线 和站点之间的关系-->
+  <insert id="saveRouteStations" parameterType="Route">
+  		insert into template_route_station_ref
+  		(template_route_id, station_id, order, distance)
+  		values
+  		<foreach collection="stations"  item="station" separator=",">
+            (#{id}, #{station.id}, #{station.order}, #{station.id},#{station.distance})
+     	</foreach>
+  </insert>
+  
+  <!-- 添加一条路线 和适合人群之间的关系-->
+  <insert id="saveRouteSuits" parameterType="Route">
+	INSERT INTO route_suit (
+		route_id,
+		type,
+		`name`,
+		create_time
+	)
+	VALUES
+	<foreach collection="suits"  item="item" separator=",">
+         (#{id}, #{item.type}, #{item.name}, now())
+  	</foreach>
+  </insert>
+  
+  <!-- 删除一条路线 和适合人群之间的关系-->
+  <update id="deleteRouteSuits" parameterType="long">
+	UPDATE route_suit
+	SET is_del = 1
+	WHERE
+		route_id = #{id}
+  </update>
+  
+  <delete id="deleteById" parameterType="long">
+  		update route
+  		set
+  			is_del = 1
+  		where id = #{id} 
+  </delete>
+  
+  <delete id="updateById" parameterType="Route">
+  		update route
+  		<set>
+  			<if test="name != null">
+  				name=#{name},
+  			</if>
+  			<if test="img != null">
+				img=#{img},
+			</if>
+			<if test="days != null">
+				days=#{days},
+			</if>
+			<if test="distance != null">
+				distance=#{distance},
+			</if>
+			<if test="cost != null">
+				cost=#{cost},
+			</if>
+			<if test="intro != null">
+				intro=#{intro},
+			</if>
+			<if test="template != null and template.id != null">
+				template_id=#{template.id}
+			</if>
+		</set>
+		where id = #{id}
+  </delete>
+  
+  <select id="getById" parameterType="long" resultMap="BaseResultMap">
+  		select  
+  			r.*,
+			suit.id suitid,
+			suit.name suitname,
+			suit.type suittype
+    	from route r
+	    left join route_suit suit on suit.route_id = r.id and suit.is_del = 0
+	    where r.id=#{id}
+    	order by r.create_time desc
+  </select>
+  
+  <select id="getAll" resultMap="SimpleResultMap">
+  		select  
+  			r.id,
+  			r.name,
+  			s.id sid,
+			s.name sname,
+			s.latitude slatitude,
+			s.longtitude slongtitude
+  		from route r
+  		left join template_route tr on tr.id = r.template_id and tr.is_del=0
+  		left join template_route_station_ref  rs on rs.template_route_id = tr.id and rs.is_del=0
+  		left join station s on s.id = rs.station_id and s.is_del=0
+	    where r.is_del = 0
+  </select>
+  
+  <select id="getAllTemplateRoutes" resultMap="SimpleResultMap">
+  		select  r.*,
+    	 	s.id sid,
+			s.name sname,
+			s.latitude slatitude,
+			s.longtitude slongtitude,
+			rs.order rsorder,
+			rs.distance rsdistance
+		from template_route r
+  		left join (select * from template_route_station_ref where is_del = 0) rs 
+  		on rs.template_route_id = r.id
+  		left join (select * from station where  is_del = 0) s
+	    on s.id = rs.station_id
+  		where r.is_del = 0
+  		order by r.create_time asc, rs.order asc
+  </select>
+  
+    <!-- 分页sql -->
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- 条件sql -->
+	<sql id="whereSql">
+		<where>
+			<if test="startTime != null">
+				and r.create_time > #{startTime}
+			</if>
+			<if test="endTime != null">
+				and r.create_time &lt; #{endTime}
+			</if>
+			<if test="keyword != null">
+				and r.name like concat('%',#{keyword},'%')
+			</if>
+			and r.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 排序sql -->
+	<sql id="orderSql">
+		order by r.create_time asc
+	</sql>
+  
+  <select id="getCountByQuery" parameterType="RouteQuery" resultType="long">
+    select count(id) from route r
+    <include refid="whereSql" />
+  </select>
+  
+  <!-- 查询分页用于后台展示 查询客户定义的路线 不包括模板路线 -->
+  <select id="getByQuery" parameterType="RouteQuery" resultMap="BaseResultMap">
+    	select  
+    		r.*,
+			suit.id suitid,
+			suit.name suitname,
+			suit.type suittype
+    	from (
+   			select *  from route r
+		    <include refid="whereSql" />
+		    <include refid="pageSql" />
+    	) r
+	    left join route_suit suit on suit.route_id = r.id and suit.is_del = 0
+    	<include refid="orderSql" />
+  </select>
+  
+  <select id="findNoneTemplateTravelNoteRoutes" resultMap="SimpleResultMap">
+  		select r.id, r.name from route r 
+  		where r.is_del = 0 and r.id not in 
+  		(select route_id from template_travel_note where is_del = 0)
+  </select>
+  
+  
+  <select id="findRouteInfo"  resultType="tech.youmu.ckl.app.vo.RouteInfo">
+    select r.id routeId,r.name name,r.img img,r.days days from route r 
+	where r.is_del =0 
+	<if test="startRows !=null and rows !=null">
+		limit #{startRows},#{rows}
+	</if>
+  </select>
+  
+  <!-- 路线明细 -->
+  <resultMap id="routeDetailInfoMap" type="tech.youmu.ckl.app.vo.RouteDetailInfo">
+    <result column="routeId" property="routeId" />
+    <result column="name"  property="name" />
+    <result column="days" jdbcType="VARCHAR" property="days" />
+    <result column="totalDistance" property="totalDistance" />
+    <result column="cost" property="cost" />
+    <result column="currentRouteId" property="currentRouteId" />
+    <result column="isExistUserRoute" property="isExistUserRoute" />
+    <collection property="suitNames" ofType="java.lang.String">
+	    <result column="suitName"/>
+    </collection>
+    
+    <collection property="routeStationInfos" ofType="tech.youmu.ckl.app.vo.RouteStationInfo">
+	    <result column="stationId" property="stationId" />
+	    <result column="stationName" property="stationName" />
+	    <result column="isCollect"  property="isCollect" />
+	    <result column="distance"  property="distance" />
+	    <result column="stationType"  property="stationType" />
+	    <result column="lng"  property="lng" />
+	    <result column="lat"  property="lat" />
+    </collection>
+  </resultMap>
+  <select id="getRouteDetailInfo"  resultMap="routeDetailInfoMap">
+    select 
+    	r.id routeId,r.name name,r.distance totalDistance,r.days days,r.cost cost,
+			trsr.distance distance,s.id stationId,s.name stationName,s.type stationType,
+			if(ucs.id is null,null,1) isCollect,s.longtitude lng,s.latitude lat,
+			rs.name suitName,ur.route_id currentRouteId,if(ur.route_id is null,0,1) isExistUserRoute
+    from route r 
+    left join template_route_station_ref trsr on trsr.template_route_id = r.template_id and trsr.is_del = 0
+	left join station s on s.id = trsr.station_id and s.is_del = 0
+	left join user_collect_station ucs on ucs.station_id = s.id and ucs.user_id = #{userId} and ucs.is_del =0
+	left join route_suit rs on rs.route_id = r.id and rs.is_del =0
+	left join user_route ur on ur.user_id = #{userId} and ur.status = 1 and ur.is_del=0 
+	where r.id =#{routeId}
+	ORDER BY trsr.order
+  </select>
+  
+  
+  <resultMap id="routeGuideInfoMap" type="tech.youmu.ckl.app.vo.RouteGuideInfo">
+    <result column="name"  property="name" />
+    <result column="img"  property="img" />
+    <result column="text" property="text" />
+    <collection property="routeGuideSubInfos" ofType="tech.youmu.ckl.app.vo.RouteGuideSubInfo">
+	   	<result column="sname"  property="name" />
+	    <result column="simg"  property="img" />
+	    <result column="stext" property="text" />
+    </collection>
+  </resultMap>
+  <select id="findRouteGuideInfo"  resultMap="routeGuideInfoMap">
+  	select rg.name,rg.img,rg.text,rgs.name sname,rgs.img simg,rgs.text stext from route_guide rg 
+	LEFT JOIN route_guide_sub rgs on rgs.super_id = rg.id and rgs.is_del = 0
+	where rg.is_del=0 and rg.route_id = #{routeId}
+  </select>
+  
+  <select id="getRepeatCount" parameterType="Route" resultType="int">
+  	select count(id) from route 
+	where is_del = 0 and name = #{name}
+	<if test="id != null">
+		and id != #{id}
+	</if>
+   </select>
+  
+</mapper>

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.ServiceEvaluationMapper" >
+
+  <resultMap id="ServiceEvaluationMap" type="ServiceEvaluation" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="content" property="content" />
+    <result column="star" property="star"/>
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="modify_time" property="modifyTime" jdbcType="TIMESTAMP" />
+    <result column="is_del" property="isDel"/>
+			
+	<!-- 订单 -->
+	<association property="order" column="order_id" javaType="Order">
+		<result column="oid" property="id" />
+		<result column="onumber" property="orderNumber" />
+		
+		<!-- 服务类型 -->
+		<association property="serviceType" javaType="ServiceType">
+			<result column="stid" property="id" />
+			<result column="stname" property="name" />
+		</association>
+		
+		<!-- 用户 -->
+		<association property="user" column="user_id" javaType="User">
+			<result column="uid" property="id" />
+			<result column="unickName" property="nickName" />
+			<result column="umobile" property="mobile" />
+		</association>
+		
+		<!-- 服务站点 -->
+		<association property="station" column="station_id" javaType="Station">
+			<result column="stationid" property="id" />
+			<result column="stationName" property="name" />
+		</association>
+		
+		<!-- 服务员工 -->
+		<association property="employee" column="emp_id" javaType="Employee">
+			<result column="eid" property="id" />
+			<result column="erealName" property="realName" />
+			<result column="emobile" property="mobile" />
+		</association>
+		
+	</association>
+	
+  </resultMap>
+  
+  <select id="getById" resultMap="ServiceEvaluationMap" parameterType="java.lang.Long" >
+    select 
+		    se.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,u.id uid
+		    ,u.mobile umobile
+		    ,u.nick_name unickName
+			,station.id stationid
+			,station.name stationName
+			,st.id stid
+			,st.name stname
+			,o.id oid
+			,o.order_number onumber
+	    from service_evaluation se
+	    left join `order` o
+	    	on se.order_id = o.id and o.is_del = 0
+	    left join service_type st
+	    	on st.type = o.order_type and st.is_del = 0
+	    left join employee e
+    		on e.id = o.emp_id AND e.is_del = 0
+    	left join `user` u
+    		on u.id = o.user_id AND u.is_del = 0
+    	left join station 
+    		on station.id = o.station_id AND station.is_del = 0
+    where se.id = #{id,jdbcType=BIGINT} AND se.is_del = 0      
+  </select>
+  
+  <delete id="deleteById" parameterType="java.lang.Long" >
+    update service_evaluation 
+    	set is_del = true
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+
+	<insert id="save">
+		insert into service_evaluation
+		(
+		content, star,order_id
+		,create_time
+		,is_del
+		)
+		values
+		(
+		#{content}
+		, #{star}
+		, #{orderId}
+		, now()
+		,0
+		)
+	</insert>
+  
+  
+  <sql id="whereSql">
+  	<where>
+	  	  <if test="keywords != null and keywords!=''" >
+	        (
+				u.mobile like concat('%',#{keywords},'%') 
+				or 
+				o.order_number like concat('%',#{keywords},'%') 
+				or
+				station.name like concat('%',#{keywords},'%')
+				or
+				e.real_name like concat('%',#{keywords},'%') 
+				or
+				se.content like concat('%',#{keywords},'%')  
+				)
+	      </if>
+	        <if test="beginTimeStr != null and beginTimeStr != '' ">
+				AND DATE_FORMAT(se.create_time, '%Y-%m-%d') >= #{beginTimeStr}
+			</if>
+			
+			<if test="endTimeStr != null and endTimeStr != '' ">
+				AND DATE_FORMAT(se.create_time, '%Y-%m-%d') &lt;= #{endTimeStr}
+			</if>
+			
+		   <if test="serviceTypeId != null and serviceTypeId != -1">
+			 	AND o.order_type = #{serviceTypeId}
+		   </if>
+		  
+		  <if test="star != null">
+			  	AND se.star BETWEEN #{star} AND (#{star}+0.9)
+		  </if>
+		  <if test="stationId != null">
+					and station.id=#{stationId}
+		  </if>
+		  <if test="userId != null">
+				AND u.id = #{userId}
+		  </if>
+		  <if test="employeeId != null">
+				AND e.id = #{employeeId}
+		  </if>
+		  AND se.is_del = 0
+     </where>
+  </sql>
+  
+  <update id="updateById" parameterType="ServiceEvaluation" >
+    update service_evaluation se
+    <set>
+    	<if test="content !=null">
+	   	 	se.content = #{content}
+	    </if>
+    </set>
+    where se.id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+  
+  <!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="ServiceEvaluationQuery" resultMap="ServiceEvaluationMap">
+	    select 
+		    se.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,u.id uid
+		    ,u.mobile umobile
+		    ,u.nick_name unickName
+			,station.id stationid
+			,station.name stationName
+			,st.id stid
+			,st.name stname
+			,o.id oid
+			,o.order_number onumber
+	    from service_evaluation se
+	    left join `order` o
+	    	on se.order_id = o.id and o.is_del = 0
+	    left join service_type st
+	    	on st.type = o.order_type and st.is_del = 0
+	    left join employee e
+    		on e.id = o.emp_id AND e.is_del = 0
+    	left join `user` u
+    		on u.id = o.user_id AND u.is_del = 0
+    	left join station 
+    		on station.id = o.station_id AND station.is_del = 0
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="ServiceEvaluationQuery" resultType="long">
+		select count(se.id) 
+	    from service_evaluation se
+	    left join `order` o
+	    	on se.order_id = o.id and o.is_del = 0
+	    left join service_type st
+	    	on st.type = o.order_type and st.is_del = 0
+	    left join employee e
+    		on e.id = o.emp_id AND e.is_del = 0
+    	left join `user` u
+    		on u.id = o.user_id AND u.is_del = 0
+    	left join station 
+    		on station.id = o.station_id AND station.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	
+	<select id="getByOrderId" resultType="tech.youmu.ckl.domain.OrderEvaluation">
+		select 
+	       id, content,order_id orderId, star stars
+	    from service_evaluation
+	    where order_id = #{orderId} and is_del=0
+	</select>
+</mapper>

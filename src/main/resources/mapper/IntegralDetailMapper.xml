@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.IntegralMapper" >
+  <resultMap type="tech.youmu.ckl.app.vo.IntegralMonthInfo" id="integralMonthInfoMap">  
+        <result column="month" property="month"/>  
+        <collection property="integralDetailInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.IntegralDetailInfo" >
+          <result column="integral" property="integral"/> 
+          <result column="remark" property="remark"/> 
+          <result column="time" property="time"/> 
+        </collection>  
+   </resultMap>
+  <select id="findIntegralMonthInfo" resultMap="integralMonthInfoMap">
+    select 
+    	if(DATE_FORMAT(id.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(id.create_time, '%m月'),DATE_FORMAT(id.create_time, '%Y年%m月'))  `month`,
+		DATE_FORMAT(id.create_time, '%m.%d %H:%i')  time,
+		id.integral,id.remark
+    from integral_detail id
+    where id.user_id = #{userId} and id.is_del =0
+	ORDER BY id.create_time desc
+  </select>
+  
+   <insert id="save">
+  	insert into integral_detail ( integral, remark,user_id, create_time,is_del)
+    values ( #{integral}, #{remark},#{userId}, now(), 0)
+  </insert>
+  
+   <select id="getNextLevelIntegral" resultType="java.lang.Integer">
+	    select MIN(ilr.integral) from integral_level_rule ilr
+		where ilr.integral>#{integral}
+  </select>
+  
+   <select id="getIntegralLevelRule" resultType="tech.youmu.ckl.domain.IntegralLevelRule">
+	    select 
+	    	ilr.id id,ilr.level level,ilr.badge_id badgeId,ilr.integral integral 
+	    from integral_level_rule ilr
+		where ilr.integral &lt;=#{integral} and ilr.is_del =0
+		ORDER BY ilr.integral DESC
+		limit 1
+  </select>
+</mapper>

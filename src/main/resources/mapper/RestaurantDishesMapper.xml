@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.RestaurantDishesMapper">
+	
+	<insert id="save" parameterType="tech.youmu.ckl.domain.RestaurantDishes">
+		insert into restaurant_dishes
+		(
+			name,
+			img,
+			price,
+			restaurant_id,
+			create_time
+		) 
+		values(
+			#{name},
+			#{img},
+			#{price},
+			#{restaurantId},
+			now()
+		)
+	</insert>
+	
+	<update id="deleteById" parameterType="long">
+		update restaurant_dishes
+		set	is_del = 1
+		where id = #{id}
+	</update>
+	
+	<update id="updateById" parameterType="tech.youmu.ckl.domain.RestaurantDishes">
+		update restaurant_dishes
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="price != null">
+				price = #{price},
+			</if>
+			<if test="img != null">
+				img = #{img},
+			</if>
+			<if test="restaurantId != null">
+				restaurant_id = #{restaurantId},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<insert id="saveComboDishes">
+		INSERT INTO restaurant_combo_dishes_ref (
+			combo_id,
+			dishes_id,
+			num,
+			price,
+			create_time
+		)
+		VALUES
+			(
+				#{comboId},
+				#{dishesId},
+				#{num},
+				(select price from restaurant_dishes where id = #{dishesId})*#{num},
+				now()
+			)
+	</insert>
+	
+	<update id="updateComboDishes">
+		UPDATE restaurant_combo_dishes_ref rcd
+		LEFT JOIN restaurant_dishes rd ON rcd.dishes_id = rd.id
+		set rcd.num = #{num}, rcd.price = #{num} * rd.price
+		where rcd.combo_id = #{comboId} and rcd.dishes_id = #{dishesId}
+	</update>
+	
+	<update id="deleteComboDishes">
+		UPDATE restaurant_combo_dishes_ref 
+		set is_del = 1
+		where combo_id = #{comboId} and dishes_id = #{dishesId}
+	</update>
+	
+	<select id="getById" parameterType="long" resultType="tech.youmu.ckl.domain.RestaurantDishes">
+		select 
+			rd.id,
+			rd.name,
+			rd.price,
+			rd.img,
+			r.id restaurantId,
+			r.name restaurantName
+		from restaurant_dishes rd
+		left join restaurant r on r.id = rd.restaurant_id and r.is_del = 0
+		where rd.id = #{id}
+	</select>
+	
+	<!-- 分页sql -->
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- 条件sql -->
+	<sql id="whereSql">
+		<where>
+			<if test="keyword != null">
+				rd.name like concat('%', #{keyword}, '%')
+			</if>
+			and rd.is_del = 0
+		</where>
+	</sql>
+	
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select 
+			count(distinct rd.id)
+		from restaurant_dishes rd
+		<include refid="whereSql" />
+	</select>
+	
+	<select id="getByQuery" parameterType="BaseQuery" resultType="tech.youmu.ckl.domain.RestaurantDishes">
+		select 
+			rd.id,
+			rd.name,
+			rd.price,
+			rd.img,
+			r.id restaurantId,
+			r.name restaurantName
+		from restaurant_dishes rd
+		left join restaurant r on r.id = rd.restaurant_id and r.is_del = 0
+		<include refid="whereSql" />
+		<include refid="pageSql"/>
+	</select>
+	
+	<select id="getDishesByComboId" parameterType="long" resultType="tech.youmu.ckl.domain.RestaurantDishes">
+		select 
+			rd.id,
+			rd.name,
+			rd.price,
+			rd.img,
+			rcd.num,
+			rcd.price total
+		from restaurant_dishes rd
+		left join restaurant_combo_dishes_ref rcd on rd.id = rcd.dishes_id and rcd.is_del = 0
+		where rd.is_del = 0 and rcd.combo_id = #{id}
+	</select>
+	
+	<!-- 查询不在套餐中的所有饭店菜品 -->
+	<select id="findNotInComboDishes" resultType="tech.youmu.ckl.domain.RestaurantDishes">
+		select 
+			rd.id,
+			rd.name,
+			rd.price,
+			rd.img
+		from restaurant_dishes rd
+		where rd.is_del = 0 and rd.restaurant_id = #{restaurantId} and  
+		rd.id not in(select dishes_id from restaurant_combo_dishes_ref where combo_id = #{comboId} and is_del = 0)
+	</select>
+	
+	<select id="getRepeatCount" parameterType="tech.youmu.ckl.domain.RestaurantDishes" resultType="int">
+		select count(id) from restaurant_dishes
+		where name = #{name} and is_del = 0 and restaurant_id = #{restaurantId}
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+	
+</mapper>

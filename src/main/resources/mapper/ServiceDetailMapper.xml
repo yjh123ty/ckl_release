@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.ServiceDetailMapper">
+  <resultMap id="BaseResultMap" type="tech.youmu.ckl.domain.ServiceDetail">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="price" jdbcType="DECIMAL" property="price" />
+    <result column="intro" jdbcType="VARCHAR" property="intro" />
+    <result column="img" jdbcType="VARCHAR" property="img" />
+    <result column="attr1" jdbcType="VARCHAR" property="attr1" />
+    <result column="attr2" jdbcType="VARCHAR" property="attr2" />
+    <result column="is_del" jdbcType="BIT" property="isDel" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+  </resultMap>
+  
+  <insert id="save" parameterType="ServiceDetail">
+  	insert into service_detail
+  	(
+		name,
+		price,
+		intro,
+		img,
+		service_id,
+		attr1,
+		attr2,
+		create_time
+	)
+	values(
+		#{name},
+		#{price},
+		#{intro},
+		#{img},
+		#{service.id},
+		#{attr1},
+		#{attr2},
+		now()
+	)
+  </insert>
+  
+  <insert id="updateById" parameterType="ServiceDetail">
+  	update service_detail
+  	<set>
+		<if test="name != null">
+			name=#{name},
+		</if>
+		<if test="price != null">
+			price=#{price},
+		</if>
+		<if test="intro != null">
+			intro=#{intro},
+		</if>
+		<if test="img != null">
+			img=#{img},
+		</if>
+		<if test="service != null and service.id != null ">
+			service_id=#{service.id},
+		</if>
+		<if test="attr1 != null">
+			attr1=#{attr1},
+		</if>
+		<if test="attr2 != null">
+			attr2=#{attr2}
+		</if>
+	</set>
+	where id = #{id}
+  </insert>
+  
+  <insert id="deleteById" parameterType="long">
+  	update service_detail
+  	set
+		is_del=1
+	where id = #{id}
+  </insert>
+  
+  <select id="getById" parameterType="long" resultMap="BaseResultMap">
+	select
+		id,
+		name,
+		price,
+		intro,
+		img,
+		attr1,
+		attr2,
+		is_del,
+		create_time,
+		modify_time
+	from service_detail
+	where id = #{id}
+  </select>
+  
+</mapper>

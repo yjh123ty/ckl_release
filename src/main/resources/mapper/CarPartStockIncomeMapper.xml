@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarPartStockIncomeMapper" >
+
+<resultMap type="CarPartStockIncome" id="CarPartStockIncomeMap" autoMapping="true">
+	<id column="id" property="id"/>
+	<association property="carPart" javaType="CarPart">
+		<id column="cp_id" property="id"/>
+		<result column="cp_name" property="name"/>
+		<result column="cp_old_months" property="oldMonths"/>
+	</association>
+	<association property="incomeUser" javaType="Employee">
+		<id column="e_id" property="id"/>
+		<result column="e_real_name" property="realName"/>
+	</association>
+	<association property="depot" javaType="CarPartDepot">
+		<id column="cpd_id" property="id"/>
+		<result column="cpd_name" property="name"/>
+		<association  property="station" javaType="Station">
+			<id column="s_id" property="id"/>
+			<result column="s_name" property="name"/>
+		</association>
+		<association  property="keeper" javaType="Employee">
+			<id column="k_id" property="id"/>
+			<result column="k_real_name" property="realName"/>
+		</association>
+	</association>
+</resultMap>
+  
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="CarPartStockIncome">
+	insert into car_part_stock_income
+	(
+	code ,
+	car_part_id ,
+	depot_id ,
+	in_price ,
+	income_date ,
+	income_user_id ,
+	income_type,
+	create_time
+	)
+	values (
+	#{code},
+	#{carPart.id},
+	#{depot.id},
+	#{inPrice}, 
+	#{incomeDate},
+	#{incomeUser.id},
+	#{incomeType},
+	now()
+	)
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update car_part_stock_income
+    set 
+    	is_del = true
+    where id = #{id} and is_del != true
+  </delete>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="CarPartStockIncomeMap">
+   SELECT
+   		cpsi.id,
+		cpsi.`code`,
+		cpsi.in_price AS inPrice,
+		cpsi.income_date AS incomeDate,
+		cpsi.income_type AS incomeType,
+		cpsi.create_time AS createTime,
+		cp.id cp_id,
+		cp.`name` cp_name,
+		e.id e_id,
+		e.real_name e_real_name,
+		cpd.id cpd_id,
+		cpd.`name` cpd_name
+	FROM
+		car_part_stock_income cpsi
+	LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+	LEFT JOIN employee e ON e.id = cpsi.income_user_id
+	LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id
+	WHERE
+		cpsi.id = #{id}
+	AND cpsi.is_del = 0
+  </select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="keyword!=null and keyword!=''">
+				and (
+						cp.name like concat('%',#{keyword},'%')
+						or 
+						cpd.`name` like concat('%',#{keyword},'%')
+						or
+						e.real_name like concat('%',#{keyword},'%')
+					) 
+			</if>
+			<if test="startDate!=null">
+				and cpsi.income_date >= #{startDate}
+			</if>
+			<if test="endDate!=null">
+				and cpsi.income_date &lt;= #{endDate}
+			</if>
+			<if test="centre!=null">
+				and cpd.centre = #{centre}
+			</if>
+			<if test="stationId!=null and stationId != -1">
+				and cpd.station_id = #{stationId}
+			</if>
+			AND cpsi.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="CarPartStockIncomeQuery" resultMap="CarPartStockIncomeMap">
+		SELECT
+			cpsi.id,
+			cpsi.`code`,
+			cpsi.in_price AS inPrice,
+			cpsi.income_date AS incomeDate,
+			cpsi.income_type AS incomeType,
+			cpsi.create_time AS createTime,
+			cp.id cp_id,
+			cp.`name` cp_name,
+			e.id e_id,
+			e.real_name e_real_name,
+			cpd.id cpd_id,
+			cpd.`name` cpd_name
+		FROM
+			car_part_stock_income cpsi
+		LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+		LEFT JOIN employee e ON e.id = cpsi.income_user_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id
+		<include refid="whereSql"></include>
+		order by cpsi.create_time desc
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<select id="getOldCarPartCountByQuery" resultType="long" parameterType="CarPartStockIncomeQuery">
+			SELECT
+				count(cpo.id)
+			FROM
+				car_part_old cpo LEFT JOIN car_part_stock_income cpsi ON cpsi.id = cpo.income_id
+			AND cpsi.is_del = 0
+			LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+			LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id LEFT JOIN station s ON s.id = cpd.station_id
+			WHERE
+			cpo.keeper_id = #{keeperId}
+			<if test="keyword!=null and keyword!=''">
+				and (
+						cp.name like concat('%',#{keyword},'%')
+						or 
+						cpd.`name` like concat('%',#{keyword},'%')
+						or
+						s.name like concat('%',#{keyword},'%')
+					) 
+			</if>
+	</select>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getOldCarPartByQuery" resultMap="CarPartStockIncomeMap" parameterType="CarPartStockIncomeQuery">
+		SELECT
+			cpsi.id,
+			cpsi.`code`,
+			cpsi.income_date incomeDate,
+			cp.id cp_id,
+			cp.name cp_name,
+			cp.old_months cp_old_months,
+			cpd.id cpd_id,
+			cpd.name cpd_name,
+			s.id s_id,
+			s.name s_name
+		FROM
+			car_part_old cpo LEFT JOIN car_part_stock_income cpsi ON cpsi.id = cpo.income_id
+		AND cpsi.is_del = 0
+		LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id LEFT JOIN station s ON s.id = cpd.station_id
+		WHERE
+			cpo.keeper_id = #{keeperId}
+			<if test="keyword!=null and keyword!=''">
+				and (
+						cp.name like concat('%',#{keyword},'%')
+						or
+						cpd.`name` like concat('%',#{keyword},'%')
+						or
+						s.name like concat('%',#{keyword},'%')
+					) 
+			</if>
+		order by cpsi.income_date asc
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 分页+高级查询 -->
+	<select id="findOldCarPartInfos" resultMap="CarPartStockIncomeMap">
+		SELECT
+			cpsi.id,
+			cpsi.`code`,
+			cp.id cp_id,
+			cpd.id cpd_id,
+			k.id k_id,
+			k.real_name k_real_name
+		FROM
+			car_part_stock_income cpsi
+		LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id
+		LEFT JOIN employee k ON k.id = cpd.keeper_id
+		WHERE
+			cpsi.`code` IN 
+			<foreach collection="list" item="item" separator="," open="(" close=")">
+					#{item}
+			</foreach>
+		AND cpsi.income_date = (select max(income_date) from car_part_stock_income where `code` = cpsi.`code`)
+	</select>
+	
+	<select id="findOldCarPartCodes" resultType="string">
+		SELECT
+			cpsi.`code`
+		FROM
+			car_part_stock_income cpsi
+		LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id
+		LEFT JOIN employee k ON k.id = cpd.keeper_id
+		WHERE
+			cpsi.`code` IN 
+			<foreach collection="list" item="item" separator="," open="(" close=")">
+					#{item}
+			</foreach>
+		AND cpsi.income_type = 1  and cpd.centre = 1
+		AND DATE(#{remindDate}) >= DATE(DATE_ADD(
+			cpsi.income_date,
+			INTERVAL cp.old_months MONTH
+		))
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="CarPartStockIncomeQuery" resultType="long">
+		select count(cpsi.id) from car_part_stock_income cpsi
+		LEFT JOIN car_part cp ON cp.id = cpsi.car_part_id
+		LEFT JOIN employee e ON e.id = cpsi.income_user_id
+		LEFT JOIN car_part_depot cpd ON cpd.id = cpsi.depot_id
+		<include refid="whereSql"></include>
+	</select>
+	
+	<insert id="batchSaveCarPartStockIncome" >
+	    insert into car_part_stock_income ( code,car_part_id, 
+	      depot_id, in_price, income_date, 
+	      income_user_id, income_type, create_time, is_del)
+	    values 
+	     <foreach collection="list" item="item" index="index" separator=",">
+	    	(#{item.code}, #{item.carPartId}, #{carPartDepotId}, #{item.inPrice}, now(),#{employeeId}, #{incomeType},now(),0)
+	    </foreach>
+  </insert>
+  
+  <select id="findRlreadyIncome" resultType="tech.youmu.ckl.domain.CarPartStockIncome">
+		SELECT
+			cpsi.id,cpsi.code,cpsi.car_part_id carPartId,cpsi.depot_id depotId
+		FROM
+			car_part_stock_income cpsi
+		WHERE
+			cpsi.is_del = 0 and cpsi.income_type=#{incomeType} and  cpsi.code  in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")"> 
+			#{item.code} 
+		</foreach> 
+	</select>
+	
+	<delete id="deleteCarPartOldInfo">
+		delete from car_part_old
+	</delete>
+	
+	<insert id="batchSaveCarPartOld">
+		insert into car_part_old
+		(
+			keeper_id,
+			income_id
+		)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(#{item.depot.keeper.id}, #{item.id})
+		</foreach>
+	</insert>
+</mapper>

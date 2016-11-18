@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarPartMapper" >
+  <select id="findCarPartTypeInfo" resultType="tech.youmu.ckl.app.vo.CarPartTypeInfo" >
+    select 
+    	id, name
+    from car_part_type cpt
+    where cpt.is_del=0
+  </select>
+  
+  <select id="findCarPartInfo" resultType="tech.youmu.ckl.app.vo.CarPartInfo" >
+     select 
+    	cp.id carPartId, cp.name,cp.pic,cp.sale_price price
+    from car_part cp
+    where cp.is_del=0 and cp.type_id =#{carPartTypeId}
+    	<if test="key !=null">
+    		and cp.name like CONCAT("%",#{key},"%")
+    	</if>
+  </select>
+  
+  <select id="getCarPartInfoByCode" resultType="tech.youmu.ckl.app.vo.CarPartInfo" >
+     select 
+    	cp.id carPartId, cp.name,cp.pic,cp.sale_price price
+    from car_part cp
+    where cp.is_del=0 and cp.sn =#{code}
+  </select>
+  
+  <insert id="save" parameterType="CarPart" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+  	insert into car_part 
+	(
+		sn,
+		name,
+		model,
+		sale_price,
+		pic,
+		type_id,
+		unit_id,
+		remark,
+		centre_out_price,
+		old_months,
+		create_time
+	)
+	values(
+		#{sn},
+		#{name},
+		#{model},
+		#{salePrice},
+		#{pic},
+		#{type.id},
+		#{unit.id},
+		#{remark},
+		#{centreOutPrice},
+		#{oldMonths},
+		now()
+	)
+  </insert>
+  
+  <insert id="importCarParts">
+  	insert into car_part 
+	(
+		sn,
+		name,
+		model,
+		sale_price,
+		type_id,
+		unit_id,
+		centre_out_price,
+		old_months,
+		create_time
+	)
+	values
+	<foreach collection="list" item="item" separator=",">
+		(
+		#{item.sn},
+		#{item.name},
+		#{item.model},
+		#{item.salePrice},
+		#{item.typeId},
+		#{item.unitId},
+		#{item.centreOutPrice},
+		#{item.oldMonths},
+		now()
+	)
+	</foreach>
+  </insert>
+  
+  <update id="updateById" parameterType="CarPart">
+		update car_part 
+		<set>
+			<if test="sn != null">
+				sn = #{sn},
+			</if>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="model != null">
+				model = #{model},
+			</if>
+			<if test="salePrice != null">
+				sale_price = #{salePrice},
+			</if>
+			<if test="pic != null">
+				pic = #{pic},
+			</if>
+			<if test="type != null and type.id != null and type.id != -1">
+				type_id = #{type.id},
+			</if>
+			<if test="unit != null and unit.id != null and unit.id != -1">
+				unit_id = #{unit.id},
+			</if>
+			<if test="remark != null">
+				remark = #{remark},
+			</if>
+			<if test="centreOutPrice != null">
+				centre_out_price=#{centreOutPrice},
+			</if>
+			<if test="oldMonths != null">
+				old_months=#{oldMonths},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<update id="deleteById" parameterType="long">
+		update car_part 
+		set is_del = 1 
+		where id = #{id} and is_del != 1
+	</update>
+	
+	<select id="checkCount" parameterType="CarPart" resultType="int">
+		select count(id) from  car_part 
+		where (name = #{name}  or sn = #{sn}) and is_del = 0
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+	
+	<resultMap type="CarPart" id="CarPartResultMap" autoMapping="true"> 
+		<id property="id" column="id"/>
+		<association property="type" javaType="CarPartType">
+			<id column="cpt_id" property="id"/>
+			<id column="cpt_name" property="name"/>
+		</association>
+		<association property="unit" javaType="SysDicDetail">
+			<id column="sdd_id" property="id"/>
+			<id column="sdd_name" property="name"/>
+		</association>
+	</resultMap>
+	
+	<select id="getById" parameterType="long" resultMap="CarPartResultMap">
+		select
+			cp.id,
+			cp.sn,
+			cp.name,
+			cp.model,
+			cp.sale_price as salePrice,
+			cp.pic,
+			cp.remark,
+			cp.centre_out_price as centreOutPrice,
+			cp.old_months as oldMonths,
+			cpt.id cpt_id,
+			cpt.name cpt_name,
+			sdd.id sdd_id,
+			sdd.name sdd_name
+		from 
+		car_part cp
+		left join sys_dic_detail sdd on sdd.id = cp.unit_id and sdd.is_del = 0
+		left join car_part_type cpt on cpt.id = cp.type_id and cpt.is_del = 0
+		where cp.id=#{id}
+	</select>
+	
+	<sql id="whereSql">
+		<where>
+			cp.is_del = 0
+			<if test="keywords != null">
+				and
+				( 
+					cp.name like concat('%',#{keywords},'%')
+					or
+					cpt.name like concat('%',#{keywords},'%')
+				)
+			</if>
+			<if test="typeId != null and typeId != -1">
+				and cp.type_id = #{typeId}
+			</if>
+		</where>
+	</sql>
+	
+	<select id="getCountByQuery" parameterType="CarPartQuery" resultType="long">
+		select 
+		count(distinct cp.id)
+		from 
+		car_part cp
+		left join sys_dic_detail sdd on sdd.id = cp.unit_id and sdd.is_del = 0
+		left join car_part_type cpt on cpt.id = cp.type_id and cpt.is_del = 0
+		<include refid="whereSql" />
+	</select>
+	
+	<select id="getByQuery" parameterType="CarPartQuery" resultMap="CarPartResultMap">
+		select 
+			cp.id,
+			cp.sn,
+			cp.name,
+			cp.model,
+			cp.sale_price as salePrice,
+			cp.pic,
+			cp.remark,
+			cp.centre_out_price as centreOutPrice,
+			cp.old_months as oldMonths,
+			cp.create_time as createTime,
+			cpt.id cpt_id,
+			cpt.name cpt_name,
+			sdd.id sdd_id,
+			sdd.name sdd_name
+		from 
+		car_part cp
+		left join sys_dic_detail sdd on sdd.id = cp.unit_id and sdd.is_del = 0
+		left join car_part_type cpt on cpt.id = cp.type_id and cpt.is_del = 0
+		<include refid="whereSql" />
+		order by cp.create_time desc 
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<select id="getAll" resultMap="CarPartResultMap">
+		select 
+			cp.id,
+			cp.sn,
+			cp.name,
+			cp.model,
+			cp.sale_price as salePrice,
+			cp.pic,
+			cp.remark,
+			cp.centre_out_price as centreOutPrice,
+			cp.old_months as oldMonths,
+			cpt.id cpt_id,
+			cpt.name cpt_name,
+			sdd.id sdd_id,
+			sdd.name sdd_name
+		from 
+		car_part cp
+		left join sys_dic_detail sdd on sdd.id = cp.unit_id and sdd.is_del = 0
+		left join car_part_type cpt on cpt.id = cp.type_id and cpt.is_del = 0
+		where cp.is_del = 0
+	</select>
+	
+	<select id="findPic" resultType="java.lang.String" >
+    select 
+    	cp.pic
+    from car_part cp
+    where cp.is_del=0 and id in
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")"> 
+			#{item.productId} 
+	</foreach> 
+  </select>
+  
+   <select id="findCarPartByCodes" resultType="tech.youmu.ckl.domain.CarPart" >
+    select 
+    	cp.id, cp.name,cp.pic,cp.sale_price salePrice,cp.sn
+    from car_part cp
+    where cp.is_del=0 and cp.sn in
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")"> 
+		#{item} 
+	</foreach> 
+  </select>
+</mapper>

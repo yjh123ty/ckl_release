@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.SettleDateMapper">
+
+	<resultMap id="SettleDateMap" type="SettleDate">
+		<id column="id" property="id"/>
+		<result column="settle_day" property="settleDay" />
+		<result column="is_final" property="isFinal" />
+		<result column="create_time" property="createTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 员工 -->
+		<association property="employee" column="emp_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="eRealName" property="realName" />
+		</association>
+	</resultMap>
+
+ <!-- 添加一个(只有第一次设置时，系统没有记录时需用) -->
+  <insert id="save" parameterType="SettleDate">
+    insert into settle_date (id,emp_id,settle_day,is_final, create_time)
+    values (1,#{employee.id},#{settleDay},#{isFinal}, #{createTime})
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update settle_date
+    set 
+    	is_del = true
+    where id = #{id}
+  </delete>
+ 
+  <!-- 更新记录 -->
+  <update id="updateById" parameterType="SettleDate">
+    update settle_date
+    set emp_id = #{employee.id},
+      settle_day = #{settleDay},
+      is_final = #{isFinal}
+    where id = 1
+  </update>
+  
+	<!-- 获取所有-->
+	<select id="getOne" resultMap="SettleDateMap">
+		select 
+		sd.* 
+		,e.id eid
+		,e.real_name eRealName		
+		from settle_date sd
+		left join employee e
+			on e.id = sd.emp_id and e.is_del = 0
+		where sd.id = 1
+	</select>
+	
+</mapper>

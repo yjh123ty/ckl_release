@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.DepartmentMapper">
+
+	<resultMap id="DepartmentMap" type="Department">
+		<id column="id" property="id"/>
+		<result column="name" property="name" />
+		<result column="status" property="status" />
+		<result column="intro" property="intro" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+	</resultMap>
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="Department">
+    insert into department (name, create_time, status, intro,modify_time)
+    values (#{name}, #{createTime}, 0, #{intro},now())
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update department
+    set 
+    	is_del = true
+    	,modify_time=now()
+    where id = #{id}
+  </delete>
+ 
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="Department">
+    update department
+    set name = #{name},
+      status = #{status},
+      intro = #{intro},
+      modify_time=now()
+    where id = #{id}
+  </update>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="DepartmentMap">
+    select 
+	   *
+	from department 
+    where id = #{id} and is_del = 0
+  </select>
+  
+	<!-- 获取所有-->
+	<select id="getAll" resultMap="DepartmentMap">
+		select * from department where is_del = 0
+	</select>
+	
+	<!-- 禁用一个 -->
+	<update id="disableById" parameterType="long">
+		update department 
+		set 
+			status=-1
+			,modify_time=now()
+		where id=#{id} and  status != -1
+	</update>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<!-- 关键词：用户账号或昵称或真实姓名 -->
+			<if test="keywords!=null and keywords!=''">
+				name like concat('%',#{keywords},'%') 
+			</if>
+			<if test="status!=null">
+				AND status = #{status}
+			</if>
+			<if test="beginTime != null ">
+				AND create_time >= #{beginTime}
+			</if>
+			<if test="endTime != null">
+				AND create_time &lt;= #{endTime}
+			</if>
+			AND is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="queryList" parameterType="DepartmentQuery" resultMap="DepartmentMap">
+		select *
+		from `department`
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCount" parameterType="DepartmentQuery" resultType="long">
+		select count(id) from department 
+		<include refid="whereSql"></include>
+	</select>
+</mapper>

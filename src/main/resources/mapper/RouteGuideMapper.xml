@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.RouteGuideMapper">
+
+	<resultMap type="RouteGuideItem" id="GuideResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="route_id" property="routeId"/>
+		<collection property="subItems" ofType="RouteGuideSubItem">
+			<id column="rgs_id" property="id"/>
+			<result column="rgs_name" property="name"/>
+			<result column="rgs_img" property="img"/>
+			<result column="rgs_text" property="text"/>
+			<result column="rgs_no" property="no"/>
+			<result column="rgs_super_id" property="superId"/>
+		</collection>
+	</resultMap>
+	
+	<insert id="saveRouteGuideItem" parameterType="RouteGuideItem">
+		insert into route_guide 
+		(
+			name,
+			no,
+			text,
+			img,
+			route_id,
+			create_time
+		) values (
+			#{name},
+			#{no},
+			#{text},
+			#{img},
+			#{routeId},
+			now()
+		)
+	</insert>
+	
+	<update id="updateRouteGuideItem" parameterType="RouteGuideItem">
+		update route_guide
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="no != null">
+				no = #{no},
+			</if>
+			<if test="text != null">
+				text = #{text},
+			</if>
+			<if test="img != null">
+				img = #{img},
+			</if>
+			<if test="routeId != null">
+				route_id = #{routeId},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<insert id="saveRouteGuideSubItem" parameterType="RouteGuideSubItem">
+		insert into route_guide_sub
+		(
+			super_id,
+			name,
+			no,
+			text,
+			img,
+			create_time
+		)
+		values(
+			#{superId},
+			#{name},
+			#{no},
+			#{text},
+			#{img},
+			now()
+		)
+	</insert>
+	
+	<update id="updateRouteGuideSubItem" parameterType="RouteGuideSubItem">
+		update route_guide_sub
+		<set>
+			<if test="superId != null">
+				super_id = #{superId},
+			</if>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="no != null">
+				no = #{no},
+			</if>
+			<if test="text != null">
+				text = #{text},
+			</if>
+			<if test="img != null">
+				img = #{img},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<select id="getRouteGuideItem" parameterType="long" resultType="RouteGuideItem">
+		select 
+  			rg.id,
+  			rg.name,
+  			rg.text,
+  			rg.img,
+  			rg.no,
+  			rg.route_id routeId
+  		from route_guide rg
+  		where rg.is_del=0 and rg.id = #{id}
+	</select>
+	
+	<select id="getRouteGuideSubItem" parameterType="long" resultType="RouteGuideSubItem">
+		select 
+  			id,
+  			name,
+  			text,
+  			img,
+  			no,
+  			super_id superId
+  		from route_guide_sub
+  		where is_del=0 and id = #{id}
+	</select>
+	
+	<update id="deleteRouteGuideItem" parameterType="long">
+		update 
+  		 route_guide
+  		set is_del =  1
+  		where id = #{id}
+	</update>
+	
+	<update id="deleteRouteGuideSubItem" parameterType="long">
+		update 
+  		 route_guide_sub
+  		set is_del =  1
+  		where id = #{id}
+	</update>
+	
+	<update id="deleteRouteGuideSubItemBySuperId" parameterType="long">
+		update 
+  		 route_guide_sub
+  		set is_del =  1
+  		where super_id = #{id}
+	</update>
+  	
+  	<select id="findRouteGuide" parameterType="long" resultMap="GuideResultMap">
+  		select 
+  			rg.id,
+  			rg.name,
+  			rg.text,
+  			rg.img,
+  			rg.no,
+  			rg.route_id,
+  			rgs.id rgs_id,
+  			rgs.name rgs_name,
+  			rgs.img rgs_img,
+  			rgs.text rgs_text,
+  			rgs.no rgs_no,
+  			rgs.super_id rgs_super_id
+  		from route_guide rg
+		left join route_guide_sub rgs on rgs.super_id = rg.id and rgs.is_del = 0
+		where rg.is_del=0 and rg.route_id = #{id}
+		order by rg.no asc,rgs.no asc
+  	</select>
+  	
+  	<select id="findRouteGuideItems" parameterType="long" resultType="RouteGuideItem">
+  		select 
+  			id,name,text,img,no,route_id routeId
+  		from route_guide rg where route_id = #{id} and is_del = 0
+  		order by no asc
+  	</select>
+  	
+  	<select id="findRouteGuideSubItems" parameterType="long" resultType="RouteGuideSubItem">
+  		select id,name,text,img,no,super_id superId  from route_guide_sub rgs where super_id = #{id} and is_del = 0
+  		order by no asc
+  	</select>
+  	
+</mapper>

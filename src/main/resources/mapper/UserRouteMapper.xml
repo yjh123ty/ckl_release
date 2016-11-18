@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.UserRouteMapper" >
+  <select id="getPassUserRouteStation" resultType="tech.youmu.ckl.domain.Station" >
+	select s.id id,s.name,s.longtitude,s.latitude from user_route ur 
+	left join user_route_station urs on urs.user_route_id = ur.id and urs.is_del = 0
+	left join station s on s.id = urs.station_id and s.is_del=0
+	where ur.user_id=#{userId} and ur.status = 1 and ur.is_del=0 and urs.status=2
+	order by urs.create_time desc
+	limit 1
+  </select>
+  
+   <select id="getArriveUserRouteStation" resultType="tech.youmu.ckl.domain.Station" >
+	select s.id id,s.name,s.longtitude,s.latitude from user_route ur 
+	left join user_route_station urs on urs.user_route_id = ur.id and urs.is_del = 0
+	left join station s on s.id = urs.station_id and s.is_del=0
+	where ur.user_id=#{userId} and ur.status = 1 and ur.is_del=0 and urs.status=1
+	order by urs.create_time desc
+	limit 1
+  </select>
+  
+  <select id="getLastUserRouteStation" resultType="tech.youmu.ckl.domain.Station" >
+	select s.id id,s.name,s.longtitude,s.latitude from user_route ur 
+	left join user_route_station urs on urs.user_route_id = ur.id and urs.is_del = 0
+	left join station s on s.id = urs.station_id and s.is_del=0
+	where ur.user_id=#{userId} and ur.status = 1 and ur.is_del=0 and (urs.status=1 or urs.status=2)
+	order by urs.create_time desc
+	limit 1
+  </select>
+  
+  <select id="getCurrentUserRoute" resultType="tech.youmu.ckl.domain.UserRoute" >
+	select 
+		ur.id, ur.user_id userId, ur.route_id routeId, ur.start_station_name startStationName, ur.end_station_name endStationName,
+		ur.status,ur.create_time createTime,ur.latitude,ur.longtitude
+	from user_route ur 
+	where ur.user_id=#{userId} and ur.status = 1 and ur.is_del=0
+	limit 1;
+  </select>
+  
+  <select id="getById" resultType="tech.youmu.ckl.domain.UserRoute" >
+	select 
+		ur.id, ur.user_id userId, ur.route_id routeId, ur.start_station_name startStationName, ur.end_station_name endStationName,
+		ur.status,ur.latitude,ur.longtitude  
+	from user_route ur 
+	where ur.id =#{id} and ur.is_del=0
+  </select>
+  
+  
+   <select id="findUserRouteInfo" resultType="tech.youmu.ckl.app.vo.UserRouteInfo" >
+	select 
+		ur.id userRouteId,ur.route_id routeId, ur.start_station_name startStationName, ur.end_station_name endStationName,
+		ur.status,DATE_FORMAT(ur.create_time, '%m月%d日  %H:%i') time
+	from user_route ur 
+	where ur.user_id=#{userId} and ur.is_del=0
+	order by ur.status,ur.create_time
+	<if test="startRows !=null and rows !=null">
+		limit #{startRows},#{rows}
+	</if>
+  </select>
+  
+  <insert id="save" useGeneratedKeys="true"  keyProperty="id">
+    insert into user_route ( user_id, route_id, 
+      start_station_name, end_station_name,longtitude,latitude, status, 
+      is_del, create_time
+      )
+    values ( #{userId}, #{routeId}, 
+      #{startStationName}, #{endStationName},#{longtitude},#{latitude}, #{status}, 
+      0, now()
+      )
+  </insert>
+  <update id="update" >
+    update user_route
+    <set >
+    	modify_time = now(),
+      <if test="userId != null" >
+        user_id = #{userId},
+      </if>
+      <if test="routeId != null" >
+        route_id = #{routeId},
+      </if>
+      <if test="startStationName != null" >
+        start_station_name = #{startStationName},
+      </if>
+      <if test="endStationName != null" >
+        end_station_name = #{endStationName},
+      </if>
+      <if test="longtitude != null" >
+        longtitude = #{longtitude},
+      </if>
+      <if test="latitude != null" >
+        latitude = #{latitude},
+      </if>
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  
+  <insert id="saveUserRouteStation" >
+    insert into user_route_station (user_route_id, station_id,status,is_del, create_time)values
+     (#{userRouteId}, #{stationId},#{status},0, now())
+  </insert>
+  
+  <update id="updateUserRouteStationByUserRouteId" >
+    update user_route_station
+    set status =2
+    where user_route_id=#{userRouteId}
+  </update>
+</mapper>

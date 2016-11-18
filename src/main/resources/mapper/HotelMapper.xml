@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.HotelMapper">
+<resultMap type="Hotel" id="BaseResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="total_room_num" property="totalRoomNum"/>
+		<result column="district_code" property="districtCode"/>
+		<result column="district_address" property="districtAddress"/>
+		<result column="address" property="address"/>
+		<result column="type" property="type"/>
+		<result column="cover" property="cover"/>
+		<result column="minimun" property="minimun"/>
+		<result column="is_del" property="isDel"/>
+		<result column="create_time" property="createTime"/>
+		
+		<association property="station" javaType="Station">
+			<id column="sid" property="id"/>
+			<id column="sname" property="name"/>
+		</association>
+		<collection property="serviceContents" ofType="SysDicDetail">
+			<id column="hcfcontent_id" property="id"/>
+			<result column="hcfname" property="name"/>
+		</collection>
+		<collection property="outsideImgs" ofType="java.lang.String">
+		    	<result column="outurl"/>
+		</collection>
+</resultMap>
+  
+  <sql id="saveSql">
+	insert into hotel
+	(
+		name ,
+		station_id ,
+		district_code,
+		district_address,
+		address ,
+		mobile ,
+		intro ,
+		stars ,
+		minimun,
+		type,
+		latitude,
+    	longtitude,
+    	cover,
+		create_time
+	)
+	values(
+		#{name},
+		#{station.id},
+		#{districtCode},
+		#{districtAddress},
+		#{address},
+		#{mobile},
+		#{intro},
+		#{stars},
+		#{minimun},
+		#{type},
+		#{latitude},
+    	#{longtitude},
+    	#{cover},
+		now()
+	)
+  </sql>
+  
+  <insert id="save" parameterType="Hotel">
+	  <include refid="saveSql"></include>
+  </insert>
+  
+  <insert id="saveOutSideImgUrls">
+	 insert into hotel_outside_images 
+	 (hotel_id, url, create_time)
+	 values
+	 <foreach collection="list" item="item" separator=",">
+	 	(#{hotelId}, #{item}, now())
+	 </foreach>
+  </insert>
+  
+  <delete id="deleteOutSideImgUrls" parameterType="long">
+	 delete from hotel_outside_images 
+	 where hotel_id = #{id}
+  </delete>
+  
+  <insert id="saveInnerImgUrls">
+	 insert into hotel_inner_images 
+	 (hotel_id, url, create_time)
+	 values
+	 <foreach collection="list" item="item" separator=",">
+	 	(#{hotelId}, #{item}, now())
+	 </foreach>
+  </insert>
+  
+  <delete id="deleteInnerImgUrls" parameterType="long">
+	 delete from hotel_inner_images 
+	 where hotel_id = #{id}
+  </delete>
+  
+  <insert id="saveHotelContents" parameterType="Hotel">
+	  insert into 
+	  	hotel_content_ref
+	  	(
+	  		hotel_id,
+			name,
+			content_id,
+			create_time
+	  	)
+	  	values
+	  	<foreach collection="serviceContents" item="item" separator=",">
+	  		(#{id},#{item.name},#{item.id},now())
+	  	</foreach>
+  </insert>
+  
+  <delete id="deleteHotelContents" parameterType="long">
+	  update
+	  	hotel_content_ref
+	  	set is_del = 1
+	  	where hotel_id = #{id} and is_del = 0 
+  </delete>
+  
+  <update id="updateById" parameterType="Hotel">
+  	update hotel
+	  	<set>
+	  		<if test="name != null">
+	  			name = #{name},
+	  		</if>
+	  		<if test="station != null and station.id != null">
+	  			station_id = #{station.id},
+	  		</if>
+	  		<if test="address != null">
+	  			address = #{address},
+	  		</if>
+	  		<if test="districtAddress != null">
+	  			district_address = #{districtAddress},
+	  		</if>
+	  		<if test="districtCode != null">
+	  			district_code = #{districtCode},
+	  		</if>
+	  		<if test="mobile != null">
+	  			mobile = #{mobile},
+	  		</if>
+	  		<if test="intro != null">
+	  			intro = #{intro},
+	  		</if>
+	  		<if test="stars != null">
+	  			stars = #{stars},
+	  		</if>
+	  		<if test="latitude != null">
+	  			latitude = #{latitude},
+	  		</if>
+	  		<if test="longtitude != null">
+	  			longtitude = #{longtitude},
+	  		</if>
+	  		<if test="minimun != null">
+	  			minimun = #{minimun},
+	  		</if>
+	  		<if test="type != null">
+	  			type = #{type},
+	  		</if>
+	  		<if test="cover != null">
+	  			cover = #{cover},
+	  		</if>
+		</set>
+		where id = #{id}
+  </update>
+  
+  <!-- 添加一个服务站的主体信息 -->
+  <insert id="saveAndGetId" parameterType="Hotel" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+	  	<include refid="saveSql"></include>
+  </insert>
+  
+  <!-- 获取查询的列表 -->
+	<select id="getById" parameterType="long" resultMap="BaseResultMap">
+		select 
+			h.id,
+			h.name,
+			h.district_code,
+			if(h.type=1, s.district_address, h.district_address) as district_address,
+			h.address,
+			h.mobile,
+			h.intro,
+			h.stars,
+			h.is_del,
+			h.create_time,
+			h.latitude,
+			h.longtitude,
+			h.status,
+			h.type, 
+			h.cover,
+			h.minimun,
+			s.id sid,
+			s.name sname,
+			hcf.content_id hcfcontent_id,
+			hcf.name hcfname,
+			hoi.url outurl
+		from hotel h 
+		left join station s on s.id = h.station_id and s.is_del = 0
+		left join hotel_content_ref hcf on hcf.hotel_id = h.id and hcf.is_del = 0
+		left join hotel_outside_images hoi on hoi.hotel_id = h.id and hoi.is_del=0
+		where h.id=#{id}
+	</select>
+  	
+    <!-- 分页sql -->
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- 根据查询对象生成的查询sql -->
+	<sql id="whereSql">
+		<where>
+			<if test="stars != null">
+				and h.stars = #{stars}
+			</if>
+			<if test="type != null">
+				and h.type = #{type}
+			</if>
+			<if test="keyword != null">
+				and 
+				(
+				h.name like concat('%',#{keyword},'%') 
+				or s.name like concat('%',#{keyword},'%')
+				) 
+			</if>
+			and h.is_del = 0
+		</where>
+	</sql>
+	
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 获取分页的条数 -->
+	<select id="getCountByQuery" parameterType="HotelQuery" resultType="long">
+		select 
+				count(distinct h.id)
+			from hotel h 
+			left join station s on s.id = h.station_id and s.is_del = 0
+			<include refid="whereSql" />
+	</select>
+	
+	<!-- 获取查询的列表 -->
+	<select id="getByQuery" parameterType="HotelQuery" resultMap="BaseResultMap">
+		select 
+			h.id,
+			h.name,
+			if(h.type=1, s.district_address, h.district_address) as district_address,
+			h.address,
+			h.mobile,
+			h.intro,
+			h.stars,
+			h.is_del,
+			h.create_time,
+			h.type,
+			h.status,
+			h.minimun,
+			hoi.url outurl,
+			s.id sid,
+			s.name sname,
+			sum(IFNULL(hr.total_num,0) - IFNULL(hrr.offline_num,0)- IFNULL(hrr.online_num,0)) total_room_num
+		from hotel h
+		left join station s on s.id = h.station_id and s.is_del = 0
+		left join hotel_outside_images hoi on hoi.hotel_id = h.id and hoi.is_del=0
+		left join hotel_room hr on hr.hotel_id = h.id and hr.is_del = 0
+		left join hotel_room_record hrr on hrr.type_id = hr.id and hrr.book_date = CURDATE() and hrr.is_del = 0
+		<include refid="whereSql" />
+		group by h.id
+		<include refid="orderSql" />
+		<include refid="pageSql"/>
+	</select>
+	
+	<select id="getRepeatCount" parameterType="Hotel" resultType="int">
+		select count(id) from hotel
+		where name = #{name} and is_del = 0 
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+	
+	<!-- 改变站点的状态 -->
+  <update id="changeStatus" parameterType="Hotel">
+  	update hotel 
+  		set 
+  			status = #{status}
+  		where id = #{id}
+  </update>
+  
+  
+  <select id="findHotel" resultType="tech.youmu.ckl.domain.Hotel">
+		select 
+				h.id id,
+				h.name name,
+				s.name stationName,
+				h.minimun minimun,
+				h.type,
+				h.stars,
+				h.latitude,
+				h.longtitude,
+				h.cover,
+				if(sum(hr.total_num)-(sum(if(hrr.offline_num is null,0,hrr.offline_num))+SUM(if(hrr.online_num is null,0,hrr.online_num)))>0,0,1) isFull
+			from hotel h
+		LEFT JOIN station s on s.id = h.station_id and s.is_del =0
+		LEFT JOIN hotel_room hr on hr.hotel_id = h.id
+		LEFT JOIN hotel_room_record hrr on hrr.type_id = hr.id and  DATE_FORMAT(hrr.book_date, '%Y-%m-%d') =DATE_FORMAT(#{startTime}, '%Y-%m-%d') 
+		<where>
+				h.is_del=0
+			<if test="search !=null">
+				and h.name like '%${search}%'  or h.district_address like '%${search}%'
+			</if>
+			<if test="stars !=null">
+				and h.stars = #{stars}
+			</if>
+			<if test="startPrice !=null and endPrice !=null">
+				and h.minimun BETWEEN #{startPrice} and #{endPrice}
+			</if>
+			<if test="startPrice ==null and endPrice !=null">
+				<![CDATA[ 
+					and h.minimun <= #{endPrice}
+				 ]]>  
+			</if>
+			<if test="startPrice !=null and endPrice ==null">
+				<![CDATA[ 
+					and h.minimun >=#{startPrice}
+				 ]]>  
+			</if>
+			<if test="stationId !=null">
+				and h.station_id = #{stationId}
+			</if>
+		</where>
+		GROUP BY h.id
+		order by h.type
+		<if test="sort == 3">
+			 ,h.minimun asc
+		</if>
+		<if test="sort == 4">
+			,h.minimun desc
+		</if>
+		
+	</select>
+	
+	
+	<resultMap type="tech.youmu.ckl.app.vo.HotelDetailInfo" id="hotelDetailInfoMap">
+		<id column="hotelId" property="hotelId"/>
+		<result column="hotelName" property="hotelName"/>
+		<result column="stationName" property="stationName"/>
+		<result column="address" property="address"/>
+		<result column="mobile" property="mobile"/>
+		<result column="stars" property="stars"/>
+		<result column="introduce" property="introduce"/>
+		<result column="coverImg" property="coverImg"/>
+		<collection property="serviceContents" ofType="java.lang.String">
+    		<result column="serviceContent" />
+    	</collection>
+		<collection property="hotelInnerImgs" ofType="java.lang.String">
+    		<result column="hotelInnerImg" />
+    	</collection>
+    	<collection property="hotelOutSideImgs" ofType="java.lang.String">
+    		<result column="hotelOutSideImg" />
+    	</collection>
+    	<collection property="hotelRoomImgs" ofType="java.lang.String">
+    		<result column="hotelRoomImg" />
+    	</collection>
+    	<collection property="roomInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.HotelRoomInfo" >
+    		<result column="roomId" property="roomId"/>
+    		<result column="roomName" property="roomName"/>
+    		<result column="roomPrice" property="roomPrice"/>
+    		<result column="roomCoverImg" property="roomCoverImg"/>
+    		<result column="roomSize" property="roomSize"/>
+    		<result column="roomCount" property="roomCount"/>
+    		<result column="typeName" property="typeName"/>
+    		<collection property="roomImgs" ofType="java.lang.String">
+	    		<result column="roomImg" />
+	    	</collection>
+    	</collection>
+	</resultMap>
+  <select id="getHotelDetailInfo" resultMap="hotelDetailInfoMap">
+		select 
+				h.id hotelId,
+				h.name hotelName,
+				s.name stationName,
+				CONCAT(h.district_address,h.address) address, 
+				h.mobile,
+				h.intro introduce,
+				h.cover coverImg,
+				hii.url hotelInnerImg,
+				hou.url hotelOutSideImg,
+				hri.url hotelRoomImg,
+				hr.id roomId,
+				hr.name roomName,
+				hr.price roomPrice,
+				hr.cover roomCoverImg,
+				hr.size roomSize,
+				hr.bed_type_name typeName,
+				hri.url roomImg,
+				hr.total_num-if(hrr.offline_num is null,0,hrr.offline_num)-if(hrr.online_num is null,0,hrr.online_num) roomCount,
+				hcr.name  serviceContent
+			from hotel h 
+		LEFT JOIN station s on s.id = h.station_id and s.is_del =0
+		LEFT JOIN hotel_inner_images hii on hii.hotel_id = h.id and hii.is_del=0
+		LEFT JOIN hotel_outside_images hou on hou.hotel_id = h.id and hou.is_del=0
+		LEFT JOIN hotel_room hr on hr.hotel_id = h.id and hr.is_del=0
+		LEFT JOIN hotel_room_images hri on hri.hotel_room_id = hr.id and hri.is_del=0
+		LEFT JOIN hotel_content_ref hcr on hcr.hotel_id = h.id and hcr.is_del=0
+		LEFT JOIN hotel_room_record hrr on  hrr.is_del =0 and hrr.type_id=hr.id and  DATE_FORMAT(hrr.book_date, '%Y-%m-%d') =DATE_FORMAT(#{startTime}, '%Y-%m-%d') 
+		where h.id=#{hotelId}
+	</select>
+</mapper>

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.UserBillMapper">
+
+	<resultMap id="UserBillInfoMap" type="UserBill">
+		<id column="id" property="id"/>
+		<result column="balance" property="balance" />
+		<result column="type" property="type" />
+		<result column="intro" property="intro" />
+		<result column="status" property="status" />
+		<result column="intro_img" property="introImg" />
+		<result column="service_type" property="serviceType" />
+		<result column="pay_method" property="payMethod" />
+		<result column="transfer_time" property="transferTime" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<!-- 用户 -->
+		<association property="user" column="user_id" javaType="User">
+			<id column="uid" property="id" />
+			<result column="umobile" property="mobile" />
+			<result column="uname" property="nickName" />
+		</association>
+	</resultMap>
+	
+	
+ <!-- 添加一个 字段待补充-->
+<!--   <insert id="save" parameterType="UserBill"> -->
+<!--     insert into user_bill (user_id,balance,type, service_type,create_time,modify_time,is_del) -->
+<!--     values (#{user.id},#{balance},#{type},#{serviceType}, #{createTime},now(),#{isDel}) -->
+<!--   </insert> -->
+  
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="UserBill">
+    update user_bill
+    set  
+     status = #{status}
+      ,balance = #{balance}
+      ,intro_img = #{introImg}
+      ,modify_time=now()
+    where id = #{id}
+  </update>
+  
+  <!-- 通过用户主键获取该用户的所有类型的账单明细 -->
+  <select id="getBillInfoByUserId" parameterType="UserBillQuery" resultMap="UserBillInfoMap">
+    select 
+	  b.*
+	  ,u.id uid
+	  ,u.nick_name uname
+	  ,u.mobile umobile
+		from user_bill b
+		left join user u 
+			on u.id = b.user_id and u.is_del = 0
+    
+    <include refid="whereSql"></include>
+    <include refid="orderSql"></include>
+    
+    <if test="pageSize>0">
+			limit #{start},#{pageSize}
+	</if>
+  </select>
+  
+	<!-- 获取所有用户的账单总金额信息-->
+	<select id="getSumOfBillInfoByQuery" parameterType="UserBillQuery" resultType="UserBillBalanceInfo">
+	
+		select 
+		info.totalCount total
+		,info.modTime lastTime
+		,info.uid uid
+		,info.uname uname
+		,info.umobile umobile
+		from 
+		(select 
+		  	 sum(b.balance) totalCount
+	  	    ,b.modify_time modTime
+		    ,u.id uid
+			,u.nick_name uname
+			,u.mobile umobile
+			from user_bill b
+			left join user u 
+				on u.id = b.user_id and u.is_del = 0
+			<include refid="whereSql"></include>
+		GROUP BY b.user_id
+		) info
+	
+		<include refid="orderSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 获取所有用户的账单总金额信息的分页条数-->
+	<select id="getSumOfBillInfoCountByQuery" parameterType="UserBillQuery" resultType="long">
+	
+		select 
+		count(*)
+		from 
+		(select 
+		  	 sum(b.balance) totalCount
+		  	,b.modify_time modTime
+		    ,u.id uid
+			,u.nick_name uname
+			,u.mobile umobile
+			from user_bill b
+			left join user u 
+				on u.id = b.user_id and u.is_del = 0
+			<include refid="whereSql"></include>
+		GROUP BY b.user_id
+		) info
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<!-- 关键词：用户账号或昵称或真实姓名 -->
+			<if test="keywords!=null and keywords!=''">
+				(
+				u.mobile like concat('%',#{keywords},'%')
+				or 
+				u.nick_name like concat('%',#{keywords},'%')
+				)
+			</if>
+			
+			<if test="beginTimeStr != null and beginTimeStr!=''">
+					AND b.create_time >= #{beginTimeStr}
+			</if>
+			<if test="endTimeStr != null and endTimeStr!=''">
+					AND b.create_time &lt;= #{endTimeStr!=}
+			</if>
+			
+			<if test="type != null">
+					AND b.type = #{type}
+			</if>
+			
+			<if test="userId != null">
+					AND b.user_id = #{userId}
+			</if>
+			
+			<if test="status != null">
+					AND b.`status` = #{status}
+			</if>
+			AND b.is_del = 0  
+		</where>
+	</sql>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 查询分页条数 -->
+	<select id="getInfoCountByQuery" parameterType="UserBillQuery" resultType="long">
+		select count(b.id)
+		from user_bill b
+		left join user u 
+			on u.id = b.user_id
+		<include refid="whereSql"></include>
+	</select>
+	
+	<update id="transferById" parameterType="UserBill">
+		update user_bill
+	    set  
+	     status = 4
+	      ,intro_img = #{introImg}
+	      ,transfer_time = #{transferTime}
+    	where id = #{id}
+	</update>
+	
+	<select id="getById" parameterType="long" resultType="UserBill">
+		select *
+		from user_bill
+    	where id = #{id}
+    	<include refid="orderSql"></include>
+	</select>
+	
+	<select id="getByOutOrderNumber" resultType="tech.youmu.ckl.domain.UserBill">
+		select id , balance, order_id orderId,type, pay_method payMethod, status,user_id userId,promotion_code promotionCode
+		from user_bill
+    	where out_order_number = #{outOrderNumber} and status=1 and is_del=0
+	</select>
+	
+	<select id="getByOrderId" resultType="tech.youmu.ckl.domain.UserBill">
+		select order_number orderNumber,out_order_number outOrderNumber, station_id stationId,user_id userId ,id , balance, order_id orderId,type, pay_method payMethod, status,recharge_combo_id rechargeComboId
+		from user_bill
+    	where order_Id = #{orderId} and is_del=0 and type = #{type}
+	</select>
+	
+	  
+	  <resultMap type="tech.youmu.ckl.app.vo.UserBillMonthInfo" id="userBillMonthInfoMap">  
+        <result column="month" property="month"/>  
+        <collection property="userBillInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.UserBillInfo" >
+          <result column="userbillId" property="userbillId"/> 
+          <result column="type" property="type"/> 
+          <result column="time" property="time"/> 
+          <result column="balance" property="balance"/> 
+          <result column="intro" property="intro"/>
+          <result column="serviceType" property="serviceType"/>
+        </collection>  
+   </resultMap>
+  <select id="findUserBillMonthInfo" resultMap="userBillMonthInfoMap">
+    select 
+    	if(DATE_FORMAT(ub.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(ub.create_time, '%m月'),DATE_FORMAT(ub.create_time, '%Y年%m月'))  `month`,
+		ub.id userBillId,DATE_FORMAT(ub.create_time, '%m-%d %H:%i')  time,
+		ub.type type,ub.balance balance,ub.intro intro,ub.service_type serviceType
+	from user_bill ub
+    where ub.user_id = #{userId} and ub.is_del =0 and ub.status=2
+	ORDER BY ub.create_time desc
+  </select>
+  
+   <select id="getUserBillDetailInfo" resultType="tech.youmu.ckl.app.vo.UserBillDetailInfo">
+  	select 
+    	ub.name name,ub.station_id stationId,ub.balance balance,ub.service_type serviceType,ub.service_type_name serviceTypeName,
+    	ub.status,ub.pay_method payMethod,ub.order_number orderNumber,DATE_FORMAT(ub.create_time, '%Y-%m-%d %H:%i') createTime,ub.type type
+    from user_bill ub
+    where ub.id = #{userBillId} and ub.status=2 and ub.is_del =0
+  </select>
+  
+  <insert id="save">
+    insert into user_bill ( station_id,name, service_type, 
+      service_type_name, balance, user_id, 
+      out_order_number, order_number, order_id, type, 
+      pay_method, status,recharge_combo_id,promotion_code, intro,is_del,create_time)
+    values ( #{stationId},#{name}, #{serviceType}, 
+      #{serviceTypeName}, #{balance}, #{userId}, 
+      #{outOrderNumber}, #{orderNumber}, #{orderId}, #{type}, 
+      #{payMethod}, #{status},#{rechargeComboId},#{promotionCode}, #{intro},0,now())
+  </insert>
+  
+  <update id="update"  >
+    update user_bill
+    <set >
+    	modify_time = now(),
+      <if test="name != null" >
+        name = #{name},
+      </if>
+      <if test="serviceType != null" >
+        service_type = #{serviceType},
+      </if>
+      <if test="serviceTypeName != null" >
+        service_type_name = #{serviceTypeName},
+      </if>
+      <if test="balance != null" >
+        balance = #{balance},
+      </if>
+      <if test="userId != null" >
+        user_id = #{userId},
+      </if>
+      <if test="outOrderNumber != null" >
+        out_order_number = #{outOrderNumber},
+      </if>
+       <if test="orderNumber != null" >
+        order_number = #{orderNumber},
+      </if>
+      <if test="orderId != null" >
+        order_id = #{orderId},
+      </if>
+      <if test="type != null" >
+        type = #{type},
+      </if>
+      <if test="payMethod != null" >
+        pay_method = #{payMethod},
+      </if>
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="intro != null" >
+        intro = #{intro},
+      </if>
+      <if test="introImg != null" >
+        intro_img = #{introImg},
+      </if>
+      <if test="transferTime != null" >
+        transfer_time = #{transferTime},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  <select id="findLastMonthMeetExpenseUserId" resultType="java.lang.Long">
+    select ub.user_id from user_bill ub
+	where DATE_FORMAT(ub.create_time, '%Y-%m')=#{lastMonthOfToday} and ub.type=2
+	GROUP BY ub.user_id
+	having SUM(ub.balance)>=50
+  </select>
+	
+</mapper>

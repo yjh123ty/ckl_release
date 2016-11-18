@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.TemplateTravelNoteMapper" >
+ <resultMap id="BaseResultMap" type="tech.youmu.ckl.domain.TemplateTravelNote" autoMapping="true">
+    <id column="id" property="id" />
+    <collection property="suits" ofType="RouteSuit">
+    	<id column="suitId" property="id"/>
+	    <result column="suitName" property="name"/>
+    </collection>
+    <collection property="templateTravelNoteSuitNames" ofType="java.lang.String">
+	    <result column="suitName" property="name"/>
+    </collection>
+    <collection property="templateTravelNoteContents" ofType="tech.youmu.ckl.domain.TemplateTravelNoteContent">
+    	<id column="tccontent_id" property="id"  />
+	    <result column="tctype" property="type"  />
+	    <result column="tcorder" property="order"  />
+    </collection>
+  </resultMap>
+
+	<sql id="whereSql">
+    	<where>
+	    	t.is_del = 0
+	    	<if test="startTime != null">
+	    		and t.create_time >= #{startTime}
+	    	</if>
+	    	<if test="endTime != null">
+	    		and t.create_time &lt;= #{endTime}
+	    	</if>
+	    	<if test="keyword != null">
+	    		and (
+	    				t.title like concat('%', #{keyword}, '%')
+	    				or r.name like concat('%', #{keyword}, '%')
+	    			)
+	    	</if>
+    	</where>
+    </sql>
+	
+   <select id="getByQuery" resultMap="BaseResultMap">
+   		select 
+   			t.*,
+			ttns.name suitName
+		from (
+			select
+				t.id,
+				t.title,
+				t.distance,
+				t.capita_cost as capitaCost,
+				t.route_img as routeImg,
+				t.day_count as dayCount,
+				t.create_time as createTime,
+				r.id as routeId,
+				r.name as routeName
+			from template_travel_note t 
+			left join route r on r.id=t.route_id and r.is_del=0
+			<include refid="whereSql" />
+			<if test="currentPage > 0 and pageSize > 0">
+				limit #{start},#{pageSize}
+			</if> 
+		) t
+		left join template_travel_note_suit ttns on ttns.travel_note_id = t.id and ttns.is_del = 0
+   </select>
+   
+   <select id="getCountByQuery" resultType="long">
+   		select 
+   			count(distinct t.id)
+		from  template_travel_note t 
+		left join route r on r.id=t.route_id and r.is_del=0
+		<include refid="whereSql" />
+   </select>
+   
+   <update id="deleteTemplateTravelNote" parameterType="long">
+		update  template_travel_note set 
+		is_del = 1
+		where id = #{id} and is_del != 1	
+   </update>
+   
+   <update id="deleteTemplateTravelNoteSuit" parameterType="long">
+		update  template_travel_note_suit set 
+		is_del = 1
+		where travel_note_id = #{id} and is_del != 1	
+   </update>
+   
+   <update id="deleteTemplateTravelNoteContent" parameterType="long">
+		update  template_travel_note_content set 
+		is_del = 1
+		where id = #{id} and is_del != 1	
+   </update>
+   
+   
+   
+   <resultMap id="BaseTemplateTravelNoteResultMap" type="tech.youmu.ckl.domain.TemplateTravelNote" autoMapping="true">
+	    <id column="id" property="id" />
+	    <collection property="suits" ofType="RouteSuit">
+	    	<id column="suitId" property="id"/>
+		    <result column="suitName" property="name"/>
+	    </collection>
+   </resultMap>
+   
+   <select id="createBaseTemplateTravelNoteByRouteId" parameterType="long" resultMap="BaseTemplateTravelNoteResultMap">
+   		select 
+	   		concat(r.name,'游记') as title, 
+	   		r.id as routeId, 
+	   		r.name as routeName, 
+	   		r.distance, 
+	   		r.cost as capitaCost, 
+	   		r.days as dayCount, 
+	   		r.img as routeImg,
+	   		rs.id as suitId,
+	   		rs.name as suitName
+	   		from route r
+	   		left join route_suit rs on rs.route_id = r.id and rs.is_del = 0
+   		where r.is_del = 0 and r.id = #{id}
+   </select>
+   
+   <insert id="save" parameterType="tech.youmu.ckl.domain.TemplateTravelNote" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+		insert into template_travel_note
+		(
+			title ,
+			route_id ,
+			distance ,
+			capita_cost ,
+			route_img ,
+			day_count ,
+			create_time
+		)
+		values
+		(
+			#{title},
+			#{routeId},
+			#{distance},
+			#{capitaCost},
+			#{routeImg},
+			#{dayCount},
+			now()
+		)
+   </insert>
+   <insert id="saveTemplateTravelNoteSuits" parameterType="TemplateTravelNote">
+   		insert into template_travel_note_suit
+   		(travel_note_id, name, create_time)
+   		values
+   		<!-- (1, "哈哈哈哈", now()) -->
+   		<foreach collection="suits" item="suit" separator=",">
+   			(#{id}, #{suit.name}, now())
+   		</foreach>
+   </insert>
+   
+   <insert id="saveContent" parameterType="tech.youmu.ckl.domain.TemplateTravelNoteContent" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+	insert into template_travel_note_content
+	(
+	content ,
+	type ,
+	`order` ,
+	travel_note_id ,
+	create_time
+	)
+	values
+	(
+	#{content},
+	#{type},
+	#{order},
+	#{travelNoteId},
+	now()
+	)
+   </insert>
+   <update id="updateContent" parameterType="tech.youmu.ckl.domain.TemplateTravelNoteContent">
+		update template_travel_note_content
+		<set>
+			<if test="content!=null">
+					content=#{content},
+			</if>
+			<if test="type != null">
+					type=#{type},
+			</if>
+			<if test="order != null">
+					`order`=#{order},
+			</if>
+			<if test="travelNoteId != null">
+					travel_note_id=#{travelNoteId},
+			</if>
+		</set>
+		where id = #{id}
+   </update>
+
+  <resultMap id="TemplateTravelNoteMap" type="tech.youmu.ckl.domain.TemplateTravelNote" >
+    <id column="id" property="id" />
+    <result column="title" property="title"  />
+    <result column="route_id" property="routeId"  />
+    <result column="distance" property="distance"  />
+    <result column="capita_cost" property="capitaCost"  />
+    <result column="route_img" property="routeImg"  />
+    <result column="day_count" property="dayCount"  />
+<!-- <result column="depart_time" property="departTime"  /> -->
+    <collection property="templateTravelNoteSuitNames" ofType="java.lang.String">
+	    <result column="name" property="name"/>
+    </collection>
+    <collection property="templateTravelNoteContents" ofType="tech.youmu.ckl.domain.TemplateTravelNoteContent">
+    	<id column="content_id" property="id"  />
+	    <result column="type" property="type"  />
+	    <result column="order" property="order"  />
+	    <result column="content" property="content" />
+    </collection>
+  </resultMap>
+  <select id="getTemplateTravelNoteByRouteId" resultMap="TemplateTravelNoteMap"  >
+    select 
+		ttn.id,ttn.title,ttn.route_id, ttn.distance, ttn.capita_cost, ttn.route_img, ttn.day_count,
+		ttnc.id content_id,ttnc.`order`,ttnc.content,ttnc.type,
+		ttns.id suit_id,ttns.`name`
+	from template_travel_note ttn
+	left join template_travel_note_content ttnc on ttnc.travel_note_id = ttn.id and ttnc.is_del=0
+	left join template_travel_note_suit ttns on ttns.travel_note_id = ttn.id and ttns.is_del=0
+	where ttn.route_id = #{routeId} and ttn.is_del =0
+	order by ttnc.`order` asc
+  </select>
+  
+  <select id="getTemplateTravelNoteContentById" parameterType="long" resultType="tech.youmu.ckl.domain.TemplateTravelNoteContent">
+  	select 
+  		id, `order`, content, type, travel_note_id travelNoteId
+  	from  template_travel_note_content
+  	where is_del = 0 and id= #{id}
+  </select>
+</mapper>

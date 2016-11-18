@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarPartTypeMapper" >
+  
+  <resultMap id="CarPartTypeMap" type="CarPartType" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+ </resultMap>
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="CarPartType">
+    insert into car_part_type (name ,`order`, intro,create_time)
+    values (#{name},#{order}, #{intro}, now())
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update car_part_type
+    set 
+    	is_del = true
+    where id = #{id} and is_del != true
+  </delete>
+  
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="CarPartType">
+    update car_part_type
+    <set> 
+   			<if test="name != null" >
+		        name = #{name},
+	        </if>
+	        <if test="order != null" >
+		        `order` = #{order},
+	        </if>
+	        <if test="intro != null" >
+		        `intro` = #{intro},
+	        </if>
+     </set>
+    where id = #{id}
+  </update>
+  
+  <!-- 添加/修改时检查重复 -->
+  <select id="checkCount" parameterType="CarPartType" resultType="int">
+  	select count(id) from car_part_type where name = #{name} and is_del = 0
+  	<if test="id != null">
+  		and id != #{id}
+  	</if>
+  </select>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="CarPartTypeMap">
+    select 
+	   id,
+	   name,
+	   `order`,
+	   intro,
+	   create_time
+	from car_part_type 
+    where id = #{id} and is_del = 0
+  </select>
+  
+  <!-- 获取所有-->
+	<select id="getAll" resultMap="CarPartTypeMap">
+		select 
+		   id,
+		   name,
+		   `order`,
+		   intro,
+		   create_time 
+		from car_part_type where is_del = 0
+		order by `order` asc, create_time asc
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="keywords!=null and keywords!=''">
+				name like concat('%',#{keywords},'%') 
+			</if>
+			AND is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="CarPartTypeQuery" resultMap="CarPartTypeMap">
+		select
+		   id,
+		   name,
+		   `order`,
+		   intro,
+		   create_time
+		from `car_part_type` 
+		<include refid="whereSql"></include>
+		order by `order` asc, create_time asc
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="CarPartTypeQuery" resultType="long">
+		select count(id) from car_part_type 
+		<include refid="whereSql"></include>
+	</select>
+</mapper>

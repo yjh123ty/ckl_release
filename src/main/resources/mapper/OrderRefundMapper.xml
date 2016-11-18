@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.OrderRefundMapper" >
+  <insert id="save"  >
+    insert into order_refund ( status, amount, 
+      `explain`, reason, order_id, 
+      is_del, create_time
+      )
+    values ( #{status}, #{amount}, 
+      #{explain}, #{reason}, #{orderId}, 
+      0, now()
+      )
+  </insert>
+  <update id="update"  >
+    update order_refund
+    <set >
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="amount != null" >
+        amount = #{amount},
+      </if>
+      <if test="explain != null" >
+        explain = #{explain},
+      </if>
+      <if test="reason != null" >
+        reason = #{reason},
+      </if>
+      <if test="orderId != null" >
+        order_id = #{orderId},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+      <if test="createTime != null" >
+        create_time = #{createTime},
+      </if>
+      <if test="modifyTime != null" >
+        modify_time = #{modifyTime},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+</mapper>

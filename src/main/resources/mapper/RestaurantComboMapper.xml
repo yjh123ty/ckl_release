@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.RestaurantComboMapper">
+<resultMap type="tech.youmu.ckl.domain.RestaurantCombo" id="BaseResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="restaurant_id"  property="restaurantId" />
+	    <result column="type_id"  property="typeId" />
+	    <result column="name"  property="name" />
+	    <result column="img"  property="img" />
+	    <result column="price"  property="price" />
+	    <result column="start_time"  property="startTime" />
+	    <result column="end_time"  property="endTime" />
+	    <result column="detail"  property="detail" />
+	    <result column="create_time"  property="createTime" />
+	    <result column="modify_time"  property="modifyTime" />
+		<association property="restaurant" javaType="tech.youmu.ckl.domain.Restaurant">
+			<id column="r_id" property="id"/>
+			<result column="r_name"  property="name" />
+		    <result column="station_id"  property="stationId" />
+		    <result column="district_address"  property="districtAddress" />
+		    <result column="district_code"  property="districtCode" />
+		    <result column="address"  property="address" />
+		    <result column="mobile"  property="mobile" />
+		    <result column="intro"  property="intro" />
+		    <result column="stars"  property="stars" />
+		    <result column="open_time"  property="openTime" />
+		    <result column="close_time"  property="closeTime" />
+		    <result column="order_tips"  property="orderTips" />
+		    <result column="order_sweet"  property="orderSweet" />
+		    <result column="order_rule"  property="orderRule" />
+		    <result column="r_create_time"  property="createTime" />
+		    <result column="r_modify_time"  property="modifyTime" />
+		</association>
+</resultMap>
+  
+  <sql id="saveSql">
+	insert into restaurant_combo
+	(
+		restaurant_id ,
+		type_id ,
+		name ,
+		img ,
+		price ,
+		start_time ,
+		end_time ,
+		detail ,
+		create_time
+	)
+	values(
+		#{restaurantId},
+		#{typeId},
+		#{name},
+		#{img},
+		#{price},
+		#{startTime},
+		#{endTime},
+		#{detail },
+		now()
+	)
+  </sql>
+  
+  <insert id="save" parameterType="RestaurantCombo">
+	  <include refid="saveSql"></include>
+  </insert>
+  
+  <insert id="saveAndGetId" parameterType="RestaurantCombo" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+	  <include refid="saveSql"></include>
+  </insert>
+  
+  <update id="updateById" parameterType="RestaurantCombo">
+  	update restaurant_combo
+	  	<set>
+	  		<if test="restaurantId != null">
+	  			restaurant_id = #{restaurantId},
+	  		</if>
+	  		<if test="typeId != null">
+	  			type_id = #{typeId},
+	  		</if>
+	  		<if test="name != null">
+	  			name = #{name},
+	  		</if>
+	  		<if test="img != null">
+	  			img = #{img},
+	  		</if>
+	  		<if test="price != null">
+	  			price = #{price},
+	  		</if>
+	  		<if test="startTime != null">
+	  			start_time = #{startTime},
+	  		</if>
+	  		<if test="endTime != null">
+	  			end_time = #{endTime},
+	  		</if>
+		</set>
+		where id = #{id}
+  </update>
+  
+  	<update id="recountPrice" parameterType="long">
+		update restaurant_combo rc
+			set price = (select sum(rd.price*rcd.num) from restaurant_combo_dishes_ref rcd left join restaurant_dishes rd on rd.id = dishes_id and rd.is_del = 0  where rcd.combo_id = rc.id and rcd.is_del = 0)
+		where  rc.id = #{id}
+	</update>
+  
+    <update id="deleteById" parameterType="RestaurantCombo">
+  		update restaurant_combo
+	  	set is_del = 1
+		where id = #{id}
+ 	</update>
+  
+  
+  <select id="findRestaurantCombos" parameterType="long" resultMap="BaseResultMap">
+		select 
+				rc.id,
+				rc.restaurant_id ,
+				rc.type_id ,
+				rc.name ,
+				rc.img ,
+				rc.price ,
+				rc.start_time ,
+				rc.end_time ,
+				rc.detail ,
+				rc.create_time
+			from restaurant_combo rc 
+			where rc.is_del = 0 and rc.restaurant_id = #{id}
+	</select>
+	
+	<select id="getById" resultType="tech.youmu.ckl.domain.RestaurantCombo">
+		select 
+				rc.id,
+				rc.restaurant_id ,
+				rc.type_id ,
+				rc.name ,
+				rc.img ,
+				rc.price ,
+				rc.start_time ,
+				rc.end_time ,
+				rc.detail ,
+				rc.create_time
+			from restaurant_combo rc 
+			where rc.is_del = 0 and rc.id = #{id}
+	</select>
+	
+	<select id="getRestaurantComboById"  resultMap="BaseResultMap">
+		SELECT 
+			rc.id,rc.restaurant_id,rc.type_id,rc.name,rc.img,rc.price,rc.start_time,rc.end_time,rc.detail,rc.create_time,rc.modify_time,
+			r.id r_id,r.name r_name,r.station_id,r.district_address,r.district_code,r.address,r.mobile,r.intro,r.stars,r.open_time,r.close_time,r.order_tips,r.order_sweet,r.order_rule,r.create_time r_create_time,r.modify_time r_modify_time
+		FROM
+			restaurant_combo rc
+		left join restaurant r on r.id = rc.restaurant_id
+		where rc.is_del = 0 and rc.id = #{id}
+	</select>
+	
+	<resultMap type="tech.youmu.ckl.app.vo.RestaurantComboDetailInfo" id="restaurantComboDetailInfoMap">
+		<result column="comboId" property="comboId"/>
+		<result column="comboName" property="comboName"/>
+		<result column="comboPrice" property="comboPrice"/>
+		<result column="comboSellCount" property="comboSellCount"/>
+		<result column="stationName" property="stationName"/>
+		<result column="comboCoverImg" property="comboCoverImg"/>
+		<result column="restaurantName" property="restaurantName"/>
+		<result column="address" property="address"/>
+		<result column="mobile" property="mobile"/>
+		<result column="stars" property="stars"/>
+		<result column="startTime" property="startTime"/>
+		<result column="endTime" property="endTime"/>
+		<result column="openTime" property="openTime"/>
+		<result column="closeTime" property="closeTime"/>
+		<result column="orderTips" property="orderTips"/>
+		<result column="orderRule" property="orderRule"/>
+		<result column="orderSweet" property="orderSweet"/>
+		<result column="restaurantIntroduce" property="restaurantIntroduce"/>
+		<result column="restaurantcoverImg" property="restaurantcoverImg"/>
+    	<collection property="comboDishInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.RestaurantComboDishInfo" >
+    		<result column="dishName" property="dishName"/>
+    		<result column="dishPrice" property="dishPrice"/>
+    		<result column="dishCount" property="dishCount"/>
+    		<result column="dishImg" property="dishImg"/>
+    	</collection>
+	</resultMap>
+	<select id="getRestaurantComboDetailInfo"  resultMap="restaurantComboDetailInfoMap">
+		SELECT
+			rc.id comboId,
+			rc.name comboName,
+			rc.price comboPrice,
+			DATE_FORMAT(rc.start_time, '%Y-%m-%d') startTime,
+			DATE_FORMAT(rc.end_time, '%Y-%m-%d') endTime,
+			rc.img comboCoverImg,
+			rc.sell_count comboSellCount,
+			r.name restaurantName,
+			CONCAT(s.district_address,r.address) address,
+			r.mobile,
+			r.stars,
+			DATE_FORMAT(r.open_time, '%H:%i') openTime,
+			DATE_FORMAT(r.close_time, '%H:%i') closeTime,
+			r.order_tips orderTips,
+			r.order_rule orderRule,
+			r.order_sweet orderSweet,
+			r.intro restaurantIntroduce,
+			r.cover restaurantcoverImg,
+			s.name stationName,
+			rd.img dishImg,
+			rd.name dishName,
+			rcdr.price dishPrice,
+			rcdr.num dishCount
+		FROM
+				restaurant_combo rc
+		LEFT JOIN restaurant r ON r.id = rc.restaurant_id
+		LEFT JOIN station s on s.id = r.station_id
+		LEFT JOIN restaurant_combo_dishes_ref rcdr on rcdr.combo_id = rc.id and rcdr.is_del=0
+		LEFT JOIN restaurant_dishes rd on rd.id = rcdr.dishes_id and rd.is_del=0
+		WHERE rc.is_del = 0 AND rc.id = #{comboId}
+	</select>
+	
+	<select id="getRepeatCount" parameterType="tech.youmu.ckl.domain.RestaurantCombo" resultType="int">
+		select count(id) from restaurant_combo
+		where name = #{name} and is_del = 0
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+</mapper>

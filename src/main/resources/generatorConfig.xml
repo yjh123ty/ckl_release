@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE generatorConfiguration PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN" "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd" >
+<generatorConfiguration >
+  <classPathEntry location="D:/OpenSource/maven-repository/mysql/mysql-connector-java/5.1.30/mysql-connector-java-5.1.30.jar" />
+  <context id="context1" >
+ 	<!-- 数据库连接配置 -->
+    <jdbcConnection driverClass="com.mysql.jdbc.Driver" 
+    connectionURL="jdbc:mysql://120.76.20.226:3306/ckl"
+    userId="root" password="Admin555" />
+    <!-- 
+    	domain自动生成
+    	targetPackage  生成domain对象的包名
+    	targetProject  生成domain对象的项目路径 从项目名字开始
+     -->
+    <javaModelGenerator targetPackage="tech.youmu.ckl.domain" targetProject="ckl/src/main/java" />
+      <!-- 
+    	mapper xml自动生成
+    	targetPackage  生成xml的包名
+    	targetProject  生成xml的的项目路径
+     -->
+    <sqlMapGenerator targetPackage="mapper" targetProject="ckl/src/main/resources" />
+    <!-- 
+    	mapper 接口自动生成
+    	targetPackage  生成接口的包名
+    	targetProject  生成接口的项目路径
+     -->
+    <javaClientGenerator targetPackage="tech.youmu.ckl.mapper" targetProject="ckl/src/main/java" type="XMLMAPPER" />
+    <!-- table 建立表和domain之间的关系  % 代表所有domain对象 -->
+    <table tableName="printer" domainObjectName="Printer">
+    </table>
+  </context>
+</generatorConfiguration>

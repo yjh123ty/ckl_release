@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.AdminMapper">
+
+	<resultMap id="BaseResultMap" type="Employee" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="last_ip" property="lastIP" />
+		<result column="real_name" property="realName"/>
+		<result column="head_icon" property="headIcon" />
+		<result column="last_visit" property="lastVisit" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		<association property="role" javaType="SysRole">
+			<id column="rid" property="id"/>
+			<id column="rname" property="name"/>
+		</association>
+	</resultMap>
+	
+	
+	
+	<sql id="saveSql">
+	insert into `employee`
+	(
+		mobile,
+		password,
+		real_name,
+		status,
+		head_icon,
+		last_ip ,
+		last_visit ,
+		role_id ,
+		create_time
+	)
+	values
+	(
+		#{mobile},
+		#{password},
+		#{realName},
+		#{status},
+		#{headIcon},
+		#{lastIP},
+		#{lastVisit} ,
+		#{role.id} ,
+		now()
+	)
+	</sql>
+	
+	<!-- 添加一个员工 -->
+	<insert id="save" parameterType="Employee">
+		<include refid="saveSql" />
+	</insert>
+	
+	<!-- 删除一个员工 -->
+	<delete id="deleteById" parameterType="long">
+		update employee
+	    set 
+	    	is_del = 1
+	    where id = #{id}
+	</delete>
+	
+	
+	<!--通过id来修改员工  -->
+	<update id="updateById" parameterType="Employee">
+		update 
+		`employee` 
+		<set>
+			<if test="mobile != null">
+				mobile = #{mobile},
+			</if>
+			<if test="realName != null">
+				real_name = #{realName},
+			</if>
+			<if test="status != null">
+				status = #{status},
+			</if>
+			<if test="headIcon != null">
+				head_icon = #{headIcon},
+			</if>
+			<if test="lastIP != null">
+				last_ip = #{lastIP},
+			</if>
+			<if test="lastVisit != null">
+				last_visit = #{lastVisit},
+			</if>
+			<if test="role != null and role.id != null">
+				role_id = #{role.id},
+			</if>
+		</set>
+		where id=#{id}
+	</update>
+	
+	<!-- 通过id查询员工对象 -->
+	<select id="getById" parameterType="long" resultMap="BaseResultMap">
+		select
+			a.id,
+			a.mobile,
+			a.password,
+			a.real_name,
+			a.status,
+			a.head_icon,
+			a.last_ip ,
+			a.last_visit ,
+			a.is_del,
+			a.create_time,
+			r.id rid,
+			r.name rname
+		from employee a
+		left join sys_role r on a.role_id = r.id and r.is_del = 0
+		where a.id=#{id}
+	</select>
+
+	<!-- 登录验证 -->
+	<select id="checkLogin" parameterType="String" resultMap="BaseResultMap">
+		select
+			a.id,
+			a.mobile,
+			a.password,
+			a.real_name,
+			a.status,
+			a.head_icon,
+			a.last_ip ,
+			a.last_visit ,
+			a.is_del,
+			a.create_time,
+			r.id rid,
+			r.name rname
+		from employee a
+		left join sys_role r on a.role_id = r.id and r.is_del = 0
+		where a.mobile=#{mobile} and a.status = 0 and a.is_del = 0
+	</select>
+	
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select count(id) from `employee`
+	</select>
+	
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="BaseResultMap">
+		select
+			a.id,
+			a.mobile,
+			a.head_icon,
+			a.real_name,
+			a.status,
+			a.head_icon,
+			a.last_ip ,
+			a.last_visit ,
+			a.create_time,
+			r.id rid,
+			r.name rname
+		from employee a
+		left join sys_role r on a.role_id = r.id and r.is_del = 0
+		where a.is_del = 0 and a.id != #{loginUserId}
+		order by a.role_id asc
+		<include refid="pageSql"></include>
+	</select>
+	
+	<!-- 查询所有未冻结的管理员 -->
+	<select id="getAll" resultType="Employee">
+		select
+			a.id,
+			a.mobile,
+			a.real_name as realName
+		from employee a
+		where a.is_del = 0 and a.status = 0
+	</select>
+	
+	<!-- 修改管理员密码-->
+	<update id="changePassword">
+		update employee set 
+		password = #{newPassword}
+		where id = #{id} and password = #{oldPassword} and role_id is not null
+	</update>
+	
+	<select id="checkCount" resultType="int" parameterType="Employee">
+		select count(id) from employee
+		where mobile = #{mobile}
+		<if test="id != null">
+			and id != #{id}
+		</if>
+	</select>
+</mapper>

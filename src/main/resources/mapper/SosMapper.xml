@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.SosMapper" >
+  <insert id="save"  >
+    insert into sos ( user_id, message, 
+      emp_id, longtitude, is_handle, 
+      latitude, create_time,
+      is_del)
+    values (#{userId}, #{message}, 
+      #{empId}, #{longtitude}, #{isHandle}, 
+      #{latitude},now(),
+      0)
+  </insert>
+  <update id="update" >
+    update sos
+    <set >
+    modify_time = #{modifyTime},
+      <if test="userId != null" >
+        user_id = #{userId},
+      </if>
+      <if test="message != null" >
+        message = #{message},
+      </if>
+      <if test="empId != null" >
+        emp_id = #{empId},
+      </if>
+      <if test="longtitude != null" >
+        longtitude = #{longtitude},
+      </if>
+      <if test="isHandle != null" >
+        is_handle = #{isHandle},
+      </if>
+      <if test="latitude != null" >
+        latitude = #{latitude},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  <resultMap id="SosMap" type="Sos">
+		<id column="id" property="id"/>
+		<result column="message" property="message" />
+		<result column="is_handle" property="isHandle" />
+		<result column="longtitude" property="longtitude" />
+		<result column="latitude" property="latitude"></result>
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<association property="employee" column="emp_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="emobile" property="mobile" />
+			<result column="erealName" property="realName" />
+			<result column="eNumber" property="empNumber" />
+		</association>	
+		
+		<association property="user" column="user_id" javaType="User">
+			<id column="uid" property="id" />
+			<result column="umobile" property="mobile" />
+			<result column="unickName" property="nickName" />
+			<result column="sex" property="sex" />
+		</association>	
+	</resultMap>
+	
+	<!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="SosMap">
+    select 
+    sos.*
+    ,u.id uid
+    ,e.id eid
+	from sos
+    left join employee e
+    		on e.id = sos.emp_id and e.is_del = 0
+    	left join `user` u
+    		on u.id = sos.user_id and u.is_del = 0
+   	where sos.is_del = 0 and sos.id = #{id}
+  </select>
+  
+  <select id="getByEmployeeIsNull" parameterType="BaseQuery" resultMap="SosMap">
+  		select 
+			sos.*
+		    ,u.id uid
+		    ,u.nick_name unickName
+		    ,u.mobile umobile
+		    ,u.sex sex
+			from sos
+    	left join `user` u
+    		on u.id = sos.user_id and u.is_del = 0
+    	where sos.is_del = 0 and sos.emp_id is NULL
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+  </select>
+  
+  <select id="getCountByEmployeeIsNull" parameterType="BaseQuery" resultType="long">
+		select count(sos.id) 
+	    from sos
+	    left join `user` u
+    		on u.id = sos.user_id and u.is_del = 0
+    	where sos.is_del = 0 and sos.emp_id is NULL
+	</select>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="SosMap">
+		select 
+			sos.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,e.emp_number eNumber
+		    ,u.id uid
+		    ,u.nick_name unickName
+		    ,u.mobile umobile
+		    ,u.sex sex
+			from sos
+	    left join employee e
+    		on e.id = sos.emp_id and e.is_del = 0
+    	left join `user` u
+    		on u.id = sos.user_id and u.is_del = 0
+    	where sos.is_del = 0
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select count(sos.id) 
+	    from sos
+	    left join employee e
+    		on e.id = sos.emp_id and e.is_del = 0
+    	left join `user` u
+    		on u.id = sos.user_id and u.is_del = 0
+		where sos.is_del = 0
+	</select>
+  
+</mapper>

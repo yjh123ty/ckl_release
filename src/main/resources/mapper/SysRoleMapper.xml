@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.SysRoleMapper">
+
+	<resultMap id="BaseResultMap" type="SysRole">
+	    <id column="id" jdbcType="BIGINT" property="id" />
+	    <result column="name" jdbcType="VARCHAR" property="name" />
+	    <result column="intro" jdbcType="VARCHAR" property="intro" />
+	    <result column="is_del" jdbcType="BIT" property="isDel" />
+	    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+	    <result column="modify_time" jdbcType="TIMESTAMP" property="modifyTime" />
+	</resultMap>
+	
+  <select id="getById" parameterType="long" resultMap="BaseResultMap" >
+    select 
+    *
+    from sys_role
+    where id = #{id}
+  </select>
+  
+  <resultMap type="SysRole" id="updateSysRoleResultMap">
+  	<id column="id" property="id"/>
+  	<result column="name" property="name"/>
+  	<result column="intro" property="intro"/>
+  	<result column="is_del" property="isDel"/>
+  	<result column="create_time" property="createTime"/>
+  	<result column="modify_time" property="modifyTime"/>
+  	<!-- 只查询菜单的Id和name -->
+  	<collection ofType="SysMenu" property="menus">
+	  	<id column="mid" property="id"/>
+	  	<result column="mname" property="name"/>
+  	</collection>
+  </resultMap>
+  
+  <select id="getWithMenusById" parameterType="long" resultMap="updateSysRoleResultMap" >
+    select 
+	    r.*,
+	    m.id mid, 
+	    m.name mname 
+	 from sys_role r 
+	 left join role_menu_ref rm 
+	 on r.id = rm.role_id 
+	 left join sys_menu m 
+	 on m.id = rm.menu_id
+	 where 
+	 	r.id = #{id}
+  </select>
+  
+  <delete id="deleteById" parameterType="long">
+    update sys_role
+    set 
+    	is_del = 1
+    	modify_time = now()
+    where id = #{id}
+  </delete>
+  
+  <delete id="deleteRoleMenusById" parameterType="SysRole">
+    update role_menu_ref
+    set is_del = 1
+    where role_id = #{id}
+  </delete>
+  
+  <insert id="save" parameterType="SysRole">
+    insert into sys_role 
+     	(
+		     name, 
+		     intro, 
+		     is_del, 
+		     create_time, 
+		     modify_time
+     	)
+    values 
+    	(
+	    	#{name}, 
+	    	#{intro}, 
+	    	#{isDel}, 
+	    	#{createTime}, 
+	    	now()
+    	)
+  </insert>
+  
+  <!-- 保存一个角色并获取主键  获取后的主键放在role对象中-->
+  <insert id="saveAndGetId" parameterType="SysRole" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+     insert into sys_role 
+     	(
+		     name, 
+		     intro, 
+		     is_del, 
+		     create_time, 
+		     modify_time
+     	)
+    values 
+    	(
+	    	#{name}, 
+	    	#{intro}, 
+	    	#{isDel}, 
+	    	#{createTime}, 
+	    	now()
+    	)
+  </insert>
+  
+  <insert id="saveRoleMenus" parameterType="SysRole">
+    insert into role_menu_ref
+	    (
+		    role_id, 
+		    menu_id, 
+		    is_del, 
+		    create_time,
+		    modify_time
+	    ) 
+    values
+     <foreach collection="menus"  item="menu" separator=",">
+            (#{id}, #{menu.id}, #{isDel}, #{createTime}, now())
+     </foreach>
+  </insert>
+  
+  <!-- 查询所有数据 -->
+  <select id="getAll" resultMap="BaseResultMap">
+    select * from sys_role
+  </select>
+  
+  <resultMap type="SysRole" id="listSysRoleResultMap">
+  	<id column="id" property="id"/>
+  	<result column="name" property="name"/>
+  	<result column="create_time" property="createTime"/>
+  	<result column="intro" property="intro"/>
+  	<result column="is_del" property="isDel"/>
+  	<!-- 只查询菜单的Id和name -->
+  	<collection ofType="SysMenu" property="menus">
+	  	<id column="mid" property="id"/>
+	  	<result column="mname" property="name"/>
+  	</collection>
+  </resultMap>
+  
+  <!-- 分页sql -->
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<!-- where sql -->
+	<sql id="whereSql">
+		<where>
+			r.is_del = 0
+		</where>
+	</sql>
+
+	<select id="getCountByQuery" parameterType="SysRoleQuery"
+		resultType="long">
+		select count(id) from sys_role
+	</select>
+  
+  <!-- 查询一页列表数据 -->
+  <select id="getByQuery" parameterType="SysRoleQuery" resultMap="listSysRoleResultMap">
+    select 
+	    r.*,
+	    m.id mid, 
+	    m.name mname 
+		 from (
+		 	select * from sys_role
+		 	<include refid="pageSql" />
+		 ) r 
+	 left join role_menu_ref rm 
+	 on r.id = rm.role_id and rm.is_del = 0
+	 left join sys_menu m 
+	 on m.id = rm.menu_id and m.is_del = 0
+	 <include refid="whereSql" />
+	 order by r.create_time desc
+  </select>
+  
+  <update id="updateById" parameterType="SysRole">
+    update sys_role
+    <set>
+      <if test="name != null">
+      	name = #{name},
+      </if>
+      <if test="intro != null">
+      	intro = #{intro},
+      </if>
+   </set>
+    where id = #{id}
+  </update>
+</mapper>

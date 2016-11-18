@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.SalaryPointStandardMapper">
+
+	<resultMap id="SalaryPointStandardMap" type="SalaryPointStandard">
+		<id column="id" property="id"/>
+		<result column="salary_level" property="salaryLevel" />
+		<result column="salary" property="salary" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		
+		<association property="jobTitle" column="job_id" javaType="JobTitle">
+			<id column="jid" property="id" />
+			<result column="jname" property="name" />
+		</association>
+	</resultMap>
+	
+	<sql id="whereSql">
+		<where>
+			<if test="jobId !=null">
+				AND job.id = #{jobId}
+			</if>
+			<if test="salaryLevel !=null and salaryLevel != -1">
+				AND s.salary_level = #{salaryLevel}
+			</if>
+			AND s.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 高级查询 -->
+	<select id="getByQuery" parameterType="SalaryPointStandardQuery" resultMap="SalaryPointStandardMap">
+		select s.*
+		,job.id jid
+		,job.name jname
+		from salary_point_standard s
+		left join job_title job on job.id = s.job_id AND job.is_del = 0
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<select id="getCountByQuery" parameterType="SalaryPointStandardQuery" resultType="long">
+		select count(s.id) from salary_point_standard s
+		left join job_title job on job.id = s.job_id AND job.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+</mapper>

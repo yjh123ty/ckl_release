@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarPartStockMapper" >
+  
+  <resultMap id="CarPartStockMap" type="CarPartStock" autoMapping="true">
+		<id column="id" property="id"/>
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+		<association property="carPart" javaType="CarPart">
+			<id column="cp_id" property="id"/>
+			<result column="cp_name" property="name"/>
+		</association>
+		<association property="depot" javaType="CarPartDepot">
+			<id column="cpd_id" property="id"/>
+			<result column="cpd_name" property="name"/>
+			<association  property="station" javaType="Station">
+				<id column="s_id" property="id"/>
+				<result column="s_name" property="name"/>
+			</association>
+		</association>
+ </resultMap>
+  
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="keyword !=null and keyword!=''">
+				and (
+						cp.name like concat('%',#{keyword},'%')
+						or
+						s.name  like concat('%',#{keyword},'%')
+						or
+						cpd.name like concat('%',#{keyword},'%')
+				) 
+			</if>
+			and cps.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="CarPartStockMap">
+		select
+			cps.id,
+			cps.num,
+			cps.create_time,
+			cp.id cp_id,
+			cp.name cp_name,
+			cpd.id cpd_id,
+			cpd.name cpd_name,
+			s.id s_id,
+			s.name s_name
+		from `car_part_stock` cps
+		left join car_part cp on cps.car_part_id = cp.id and cp.is_del = 0
+		left join car_part_depot cpd on  cpd.id = cps.depot_id and cpd.is_del = 0
+		left join station s on s.id = cpd.station_id and s.is_del = 0
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select count(cps.id) from car_part_stock  cps
+		left join car_part cp on cps.car_part_id = cp.id and cp.is_del = 0
+		left join car_part_depot cpd on  cpd.id = cps.depot_id and cpd.is_del = 0
+		left join station s on s.id = cpd.station_id and s.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+	
+	<select id="findAllStockCarPartCode" resultType="string">
+		SELECT
+		IF (
+			count(DISTINCT cpsi.id) > count(DISTINCT cpso.id),
+			cpsi.code,
+			NULL
+		)
+		FROM
+			car_part_stock_income cpsi
+		LEFT JOIN car_part_stock_outcome cpso ON cpsi.`code` = cpso.`code`
+		AND cpso.is_del = 0
+		WHERE
+			cpsi.is_del = 0
+		GROUP BY
+			cpsi.`code`
+	</select>
+	
+	
+	<select id="findByDepotIdAndCarPartId" resultType="tech.youmu.ckl.domain.CarPartStock">
+		SELECT
+			cps.id,cps.car_part_id carPartId,cps.depot_id depotId,cps.num
+		FROM
+			car_part_stock cps
+		WHERE
+			cps.is_del = 0 and cps.depot_id=#{carPartDepotId} and cps.car_part_id in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")"> 
+			#{item} 
+		</foreach> 
+	</select>
+	
+	
+	<insert id="batchSaveCarPartStock">
+    insert into car_part_stock (car_part_id, depot_id,num, is_del, create_time)
+    values 
+    <foreach collection="list" item="item" index="index" separator="," >
+    	( #{item.carPartId}, #{item.depotId},#{item.num}, 0,now())
+    </foreach>
+  </insert>
+  
+   <update id="batchUpdateCarPartStockNum">
+	<foreach collection="list" item="item" index="index" open="" close="" separator=";">
+		update car_part_stock
+    	set num = #{item.num},modify_time = now()
+    	where id =#{item.id} 
+	</foreach>
+  </update>
+</mapper>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.PhoneMessageMapper" >
+  <resultMap id="BaseResultMap" type="tech.youmu.ckl.domain.PhoneMessage" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="phone" property="phone" jdbcType="VARCHAR" />
+    <result column="intro" property="intro" jdbcType="VARCHAR" />
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="modify_time" property="modifyTime" jdbcType="TIMESTAMP" />
+    <result column="is_del" property="isDel" jdbcType="BIT" />
+  </resultMap>
+  
+  	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="BaseResultMap">
+		select *
+		from `phone_message`
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select count(id) from phone_message 
+	</select>
+  
+  <select id="getById" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    select 
+     *
+    from phone_message
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  
+  <update id="deleteById" parameterType="java.lang.Long" >
+    update phone_message set is_del = 1
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <insert id="save" parameterType="tech.youmu.ckl.domain.PhoneMessage" >
+    insert into phone_message (phone, intro,create_time, is_del)
+    values (#{phone,jdbcType=VARCHAR}, #{intro,jdbcType=VARCHAR},now(), 0)
+  </insert>
+  
+  <update id="updateById" parameterType="tech.youmu.ckl.domain.PhoneMessage" >
+    update phone_message
+    <set >
+      <if test="phone != null" >
+        phone = #{phone,jdbcType=VARCHAR},
+      </if>
+      <if test="intro != null" >
+        intro = #{intro,jdbcType=VARCHAR},
+      </if>
+      <if test="modifyTime != null" >
+        modify_time = #{modifyTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel,jdbcType=BIT},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <select id="findPhone" resultType="java.lang.String" >
+    select 
+     phone
+    from phone_message
+    where is_del=0
+  </select>
+  
+</mapper>

@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.FriendMapper" >
+  <select id="getFriendCountByUserId" resultType="java.lang.Integer"  >
+	    select 
+	   		count(uf.id)
+	    from user_friend uf
+	    where uf.user_id = #{userId} and uf.is_del =0
+	  </select>
+	  
+	  <select id="findUserFriendInfo" resultType="tech.youmu.ckl.app.vo.UserFriendInfo"  >
+	    select 
+	   		uf.id,uf.friend_id userId,uf.note note,if(uf.note is null,u.nick_name,uf.note) userName,
+	   		u.head_icon headIcon,u.level level,if(uf.id is null,0,1) isFriend
+	    from user_friend uf
+	    left join user u on u.id= uf.friend_id
+	    where uf.user_id = #{userId} and uf.is_del =0
+	  </select>
+	  
+	   <select id="getById" resultType="tech.youmu.ckl.domain.UserFriend"  >
+	    select 
+	   		uf.id,uf.friend_id friendId,uf.note note
+	    from user_friend uf
+	    where uf.id = #{id} and uf.is_del =0
+	  </select>
+	  
+	  
+	  <select id="getUserFriendInfo" resultType="tech.youmu.ckl.app.vo.UserFriendInfo"  >
+	    select 
+	   		uf.id,u.id userId,uf.note note,if(uf.note is null,u.nick_name,uf.note) userName,
+	   		u.head_icon headIcon,u.level level,if(uf.id is null,0,1) isFriend
+	    from user u
+	    left join user_friend uf on u.id= uf.friend_id and uf.user_id=#{userId} and uf.is_del =0
+	    where u.id = #{friendId} and u.is_del =0
+	  </select>
+	  
+	  
+	   <select id="getUserFriendInfoByMobile" resultType="tech.youmu.ckl.app.vo.UserFriendInfo"  >
+	    select 
+	   		uf.id,u.id userId,uf.note note,if(uf.note is null,u.nick_name,uf.note) userName,
+	   		u.head_icon headIcon,u.level level,if(uf.id is null,0,1) isFriend
+	    from user u
+	    left join user_friend uf on u.id= uf.friend_id and uf.user_id=#{userId} and uf.is_del =0
+	    where u.mobile = #{mobile} and u.is_del =0
+	  </select>
+	  
+	  <update id="updateUserFriend">
+	    update user_friend
+	    <set >
+	    	modify_time = now(),
+	      <if test="userId != null" >
+	        user_id = #{userId},
+	      </if>
+	      <if test="friendId != null" >
+	        friend_id = #{friendId},
+	      </if>
+	      <if test="note != null" >
+	        note = #{note},
+	      </if>
+	      <if test="isDel != null" >
+	        is_del = #{isDel},
+	      </if>
+	    </set>
+	    where id = #{id}
+	  </update>
+	  
+   <insert id="saveUserFriend" >
+    insert into user_friend ( user_id, friend_id, create_time,is_del)
+    values ( #{userId}, #{friendId},now(),0),(#{friendId},#{userId},now(),0)
+  </insert>
+  
+  <insert id="saveUserFriendApply">
+    insert into user_friend_apply ( user_id, friend_id,status, remark, create_time,is_del)
+    values (#{userId}, #{friendId}, #{status}, #{remark},now(),0)
+  </insert>
+  
+  
+  <select id="findUserFriendApplyInfo" resultType="tech.youmu.ckl.app.vo.UserFriendApplyInfo" >
+    select 
+    	ufa.id userFriendApplyId,u.id userId,if(uf.note is null,u.nick_name,uf.note) userName,
+    	u.head_icon headIcon,ufa.status,ufa.remark
+    from user_friend_apply ufa
+    left join user u on u.id = ufa.user_id 
+    left join user_friend uf on u.id= uf.friend_id and uf.user_id=#{userId} and uf.is_del =0 
+    where ufa.friend_id=#{userId}
+  </select>
+  
+  <select id="getUserFriendApply" resultType="tech.youmu.ckl.domain.UserFriendApply" >
+    select 
+    	ufa.id id,ufa.user_id userId,ufa.friend_id friendId
+    from user_friend_apply ufa
+    <where> 
+    		ufa.user_id = #{userId} and  ufa.friend_id=#{friendId}
+    </where>
+  </select>
+  
+  <select id="getUserFriendApplyById" resultType="tech.youmu.ckl.domain.UserFriendApply" >
+    select 
+    	ufa.id id,ufa.user_id userId,ufa.friend_id friendId,ufa.status
+    from user_friend_apply ufa
+    <where> 
+    		ufa.id =#{id}
+    </where>
+  </select>
+  
+  <update id="updateUserFriendApply"  >
+    update user_friend_apply
+    <set >
+     modify_time = now(),
+      <if test="status != null" >
+        status = #{status,jdbcType=INTEGER},
+      </if>
+       
+      <if test="isDel != null" >
+        is_del = #{isDel,jdbcType=BIT},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  
+   <select id="isFriend" resultType="java.lang.Boolean" >
+	    select 
+	   		if(count(uf.id)=0,0,1)
+	    from user_friend uf
+	    where ((uf.user_id = #{userId} and uf.friend_id = #{friendId})
+	    	or (uf.user_id = #{friendId} and uf.friend_id = #{userId}))
+	    	and uf.is_del =0
+	  </select>
+	  
+	  
+	<update id="deleteUserFriend"  >
+    update user_friend
+    <set >
+     modify_time = now(),
+     is_del = 1
+    </set>
+    where (user_id = #{userId} and friend_id = #{friendId})
+	    	or (user_id = #{friendId} and friend_id = #{userId})
+  </update>
+</mapper>

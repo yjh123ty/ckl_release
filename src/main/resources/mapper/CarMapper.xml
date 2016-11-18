@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.CarMapper">
+
+	<select id="findCarInfo" resultType="tech.youmu.ckl.app.vo.CarInfo">
+		select 
+			c.id carId,c.car_type carType,c.plate_number plateNumber,c.engine_number engineNumber,c.frame_number frameNumber,c.is_default isDefault 
+		from user_car c
+		where c.user_id = #{userId} and c.is_del =0
+	</select>
+	
+	<select id="getDefaultCarInfo" resultType="tech.youmu.ckl.app.vo.CarInfo">
+		select 
+			c.id carId,c.car_type carType,c.plate_number plateNumber,c.engine_number engineNumber,c.frame_number frameNumber,c.is_default isDefault 
+		from user_car c
+		where c.user_id = #{userId} and c.is_del =0 and is_default =1
+	</select>
+
+	<insert id="save">
+		insert into user_car (user_id, car_type,is_default, plate_number,engine_number,frame_number,is_del,create_time)
+		values (#{userId},#{carType},#{isDefault}, #{plateNumber},#{engineNumber},#{frameNumber},0, now())
+	</insert>
+	<update id="update">
+		update user_car
+		<set>
+			modify_time = now(),
+			<if test="carType != null">
+				car_type = #{carType},
+			</if>
+			<if test="isDefault != null">
+				is_default = #{isDefault},
+			</if>
+			<if test="plateNumber != null">
+				plate_number = #{plateNumber},
+			</if>
+			<if test="frameNumber != null">
+				frame_number = #{frameNumber},
+			</if>
+			<if test="engineNumber != null">
+				engine_number = #{engineNumber},
+			</if>
+			<if test="isDel != null" >
+	        	is_del = #{isDel},
+	     	 </if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<update id="updateByUserId">
+		update user_car
+		<set>
+			modify_time = now(),
+			<if test="isDefault != null">
+				is_default = #{isDefault},
+			</if>
+		</set>
+		where user_id = #{userId}
+	</update>
+</mapper>

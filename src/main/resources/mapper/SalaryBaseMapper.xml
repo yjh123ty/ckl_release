@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.SalaryBaseMapper" >
+
+  <resultMap id="SalaryBaseMap" type="SalaryBase" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="order_num" property="orderNum"/>
+    <result column="salary" property="salary"/>
+    <result column="create_time" property="createTime"/>
+    <result column="modify_time" property="modifyTime"/>
+    <result column="is_del" property="isDel"/>
+  </resultMap>
+  
+  <select id="getAll" resultMap="SalaryBaseMap">
+  	select 
+		    s.*
+	    from salary_base s
+	    where s.is_del = 0
+  </select>
+  
+  <select id="getById" resultMap="SalaryBaseMap" parameterType="java.lang.Long" >
+    select 	
+		    s.*
+	    from salary_base s
+    where s.id = #{id} AND s.is_del = 0
+  </select>
+  
+  <select id="getSalaryBaseByOrderNum" resultMap="SalaryBaseMap" parameterType="java.lang.Integer" >
+    select 	
+		    s.*
+	    from salary_base s
+    where s.order_num = #{orderNum} AND s.is_del = 0
+  </select>
+  
+  <update id="updateById" parameterType="SalaryBase" >
+    update salary_base s
+    set 
+    s.salary = #{salary}
+    where s.id = #{id,jdbcType=BIGINT}
+  </update>
+  
+</mapper>

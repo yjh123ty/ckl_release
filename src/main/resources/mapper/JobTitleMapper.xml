@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.JobTitleMapper">
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="JobTitle">
+    insert into job_title 
+    (name
+    ,ratio
+    , create_time
+    ,is_del)
+    values 
+    (#{name}
+    , #{ratio}
+    , now()
+    ,0)
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update job_title
+    set is_del = true,modify_time=now()
+    where id = #{id}
+  </delete>
+ 
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="JobTitle">
+    update job_title
+        name = #{name},
+        ratio = #{ratio}
+    where id = #{id}
+  </update>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="JobTitleMap">
+    select 
+    t.*
+	from job_title t
+    where t.id = #{id} and t.is_del = 0
+  </select>
+  
+	<!-- 获取所有的职称 -->
+	<select id="getAll" resultType="JobTitle">
+		select * from job_title where is_del = 0
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="keywords!=null and keywords!=''">
+				t.name like concat('%',#{keywords},'%') 
+			</if>
+			<if test="beginTime != null ">
+				AND t.create_time >= #{beginTime}
+			</if>
+			<if test="endTime != null">
+				AND t.create_time &lt;= #{endTime}
+			</if>
+			AND t.is_del = 0
+		</where>
+	</sql>
+	
+	<resultMap id="JobTitleMap" type="JobTitle">
+		<id column="id" property="id"/>
+		<result column="name" property="name" />
+		<result column="ratio" property="ratio" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+	</resultMap>
+	
+	<!-- 分页+高级查询 -->
+	<select id="queryList" parameterType="JobTitleQuery" resultMap="JobTitleMap">
+		select t.*
+		from job_title t
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCount" parameterType="JobTitleQuery" resultType="long">
+		select count(t.id) from job_title t
+		<include refid="whereSql"></include>
+	</select>
+</mapper>

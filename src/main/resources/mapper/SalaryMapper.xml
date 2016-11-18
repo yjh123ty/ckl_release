@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.SalaryMapper" >
+
+  <resultMap id="SalaryMap" type="Salary" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="bouns" property="bouns"/>
+    <result column="base_salary" property="baseSalary"/>
+    <result column="point_salary" property="pointSalary"/>
+    <result column="performance_salary" property="performanceSalary"/>
+    <result column="allowance" property="allowance"/>
+    <result column="bouns" property="bouns"/>
+    <result column="deduct_salary" property="deductSalary"/>
+    <result column="real_salary" property="realSalary"/>
+    <result column="record_month" property="recordMonth"/>
+    <result column="intro" property="intro"/>
+    
+    <result column="create_time" property="createTime"/>
+    <result column="modify_time" property="modifyTime"/>
+    <result column="is_del" property="isDel"/>
+    
+	<association property="employee" column="emp_id" javaType="Employee">
+			<id column="eid" property="id" />
+			<result column="emobile" property="mobile" />
+			<result column="erealName" property="realName" />
+			<result column="empNumber" property="empNumber" />
+			<result column="salaryLevel" property="salaryLevel" />
+			<result column="status" property="status" />
+			
+			<!-- 部门 -->
+			<association property="dept" column="dept_id" javaType="Department">
+				<result column="did" property="id" />
+				<result column="dname" property="name" />
+			</association>
+			<!-- 职称 -->
+			<association property="jobTitle" column="job_id" javaType="JobTitle">
+				<result column="jname" property="name" />
+			</association>
+	</association>
+	
+  </resultMap>
+  
+  <select id="getById" resultMap="SalaryMap" parameterType="java.lang.Long" >
+    select 
+		    s.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,e.emp_number empNumber
+<!-- 		    ,d.id did -->
+<!-- 		    ,d.name dname -->
+			,job.name jname
+	    from salary s
+	    left join employee e
+    		on e.id = s.emp_id and e.is_del = 0
+<!--     	left join department d -->
+<!--     		on d.id = e.dept_id and d.is_del = 0 -->
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+    where s.id = #{id} AND s.is_del = 0
+  </select>
+  
+  <delete id="deleteById" parameterType="java.lang.Long" >
+    update salary 
+    set is_del = true,modify_time=now()
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+  <select id="getAll" resultMap="SalaryMap">
+  	select 
+		    s.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,e.emp_number empNumber
+<!-- 		    ,d.id did -->
+<!-- 		    ,d.name dname -->
+			,job.name jname
+	    from salary s
+	    left join employee e
+    		on e.id = s.emp_id and e.is_del = 0
+<!--     	left join department d -->
+<!--     		on d.id = e.dept_id and d.is_del = 0 -->
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+  </select>
+  
+  <insert id="save" parameterType="salary" >
+    insert into salary 
+    (	
+    	emp_id
+    	,base_salary
+    	,point_salary
+    	,performance_salary
+    	,allowance
+    	,bouns
+    	,deduct_salary
+    	,real_salary
+    	,record_month
+	    ,intro
+    	,create_time
+    )
+    values 
+    (
+      #{employee.id}
+    , #{baseSalary}
+    , #{pointSalary}
+    , #{performanceSalary}
+    , #{allowance}
+    , #{bouns}
+    , #{deductSalary}
+    , #{realSalary}
+    , #{recordMonth}
+    , #{intro}
+    , now()
+      )
+  </insert>
+  
+  
+  <sql id="whereSql">
+  	<where>
+	  	  <if test="keywords != null and keywords!=''" >
+	        (
+				e.mobile like concat('%',#{keywords},'%') 
+				or 
+				e.real_name like concat('%',#{keywords},'%') 
+				or
+				job.name like concat('%',#{keywords},'%') 
+				)
+	      </if>
+	      <if test="searchTime != null ">
+			  AND s.record_month like concat('%',#{searchTime},'%') 
+		  </if>
+		  <if test="beginTimeStr != null and beginTimeStr!='' and endTimeStr != null and endTimeStr!=''">
+			  AND s.record_month  BETWEEN #{beginTimeStr} AND #{endTimeStr}
+		  </if>
+		  <if test="employeeId != null">
+			and e.id=#{employeeId}
+		  </if>
+		  AND s.is_del = 0
+     </where>
+  </sql>
+  
+  <!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem == null">
+			order by s.record_month desc
+		</if>
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+  
+  <update id="updateById" parameterType="Salary" >
+    update salary s
+    set 
+    s.allowance = #{allowance}
+    ,s.bouns = #{bouns}
+    ,s.deduct_salary = #{deductSalary}
+    ,s.intro = #{intro}
+    ,s.real_salary=#{realSalary}
+    where s.id = #{id,jdbcType=BIGINT} and s.is_del = 0
+  </update>
+  
+  <!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="SalaryQuery" resultMap="SalaryMap">
+		select 
+		    s.*
+		    ,e.id eid
+			,e.mobile emobile
+		    ,e.real_name erealName
+		    ,e.emp_number empNumber
+		    ,e.salary_level salaryLevel
+			,job.name jname
+	    from salary s
+	    left join employee e
+    		on e.id = s.emp_id and e.is_del = 0
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="SalaryQuery" resultType="long">
+		select count(s.id) 
+	    from salary s
+	    left join employee e
+    		on e.id = s.emp_id and e.is_del = 0
+<!--     	left join department d -->
+<!--     		on d.id = e.dept_id and d.is_del = 0 -->
+    	left join job_title job
+    		on job.id = e.job_id and job.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+</mapper>

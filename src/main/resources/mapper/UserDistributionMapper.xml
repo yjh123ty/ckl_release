@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.UserDistributionMapper" >
+  <select id="getTeamNumber" resultType="java.lang.Integer" >
+     select 
+    	count(ud.id)
+    from  user_distribution ud 
+    where ud.parent_lv1=#{userId} and ud.is_del=0
+  </select>
+  
+  
+  <select id="findTeamInfo" resultType="tech.youmu.ckl.app.vo.TeamInfo" >
+     select 
+    	ud.user_id userId,if(uf.note is null,u.nick_name,uf.note) userName,u.head_icon headIcon,DATE_FORMAT(u.create_time, '%Y-%m-%d')  time
+     from  user_distribution ud 
+	 left join user u on u.id = ud.user_id and u.is_del = 0
+	 left join user_friend uf on u.id= uf.friend_id and uf.user_id=#{userId} and uf.is_del =0
+     where ud.parent_lv1 =#{userId} and ud.is_del=0
+  </select>
+  
+  <select id="getByUserId" resultType="tech.youmu.ckl.domain.UserDistribution" >
+     select 
+    	ud.parent_lv1 parentLv1,ud.parent_lv2 parentLv2,ud.parent_lv3 parentLv3
+    from  user_distribution ud 
+    where ud.user_id=#{userId} and ud.is_del=0
+  </select>
+  
+  <insert id="save">
+    insert into user_distribution (user_id, parent_lv1, 
+      parent_lv2, parent_lv3, is_del, 
+      create_date)
+    values ( #{userId}, #{parentLv1}, 
+      #{parentLv2}, #{parentLv3},0, 
+      now())
+  </insert>
+</mapper>

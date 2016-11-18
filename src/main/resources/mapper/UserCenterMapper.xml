@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.UserCenterMapper">
+
+	<resultMap id="UserCenterMap" type="UserCenter">
+		<result column="totalCommission" property="totalCommission" />
+		<result column="rechargeCount" property="rechargeCount" />
+		<result column="badgeCount" property="badgeCount" />
+		<result column="orderNumCount" property="orderNumCount" />
+		<result column="avgStar" property="avgStar" />
+		<result column="topicCount" property="topicCount" />
+		<result column="companionTopicCount" property="companionTopicCount" />
+		<result column="userTravelNoteCount" property="userTravelNoteCount" />
+		<result column="userTrackCount" property="userTrackCount" />
+		<result column="feedbackCount" property="feedbackCount" />
+
+		<!-- 用户 -->
+		<association property="user" column="user_id" javaType="User">
+			<id column="id" property="id" />
+			<result column="mobile" property="mobile" />
+			<result column="nick_name" property="nickName" />
+			<result column="level" property="level" />
+			<result column="balance" property="balance" />
+			<result column="head_icon" property="headIcon" />
+		</association>
+	</resultMap>
+
+	<select id="getUserCenterByUserId" parameterType="long" resultMap="UserCenterMap">
+		select
+		u.id
+		,u.mobile
+		,u.nick_name
+		,u.`level`
+		,u.balance
+		,u.head_icon
+		,IFNULL(userAvgStar.avgStar,0) avgStar 
+		,IFNULL(SUM(bill.balance),0) rechargeCount
+		,IFNULL(commission.totalCommission,0) totalCommission
+		,IFNULL(userBadge.badgeCount,0) badgeCount
+		,IFNULL(orderInfo.orderNumCount,0) orderNumCount
+		,IFNULL(userTopic.topicCount,0) topicCount
+		,IFNULL(companionTopic.companionTopicCount,0) companionTopicCount 
+		,IFNULL(userTravelNote.userTravelNoteCount,0) userTravelNoteCount
+		,IFNULL(userTrack.userTrackCount,0) userTrackCount
+		,IFNULL(userFeedback.feedbackCount,0) feedbackCount
+
+		from `user` u
+		LEFT JOIN user_bill bill
+		on bill.user_id = u.id and bill.is_del = 0 and bill.type = 1 and bill.`status` = 2
+
+		LEFT JOIN
+		(
+		select
+		u.id uid
+		,sum(cd.amount) as totalCommission
+		from commission_detail cd
+		left join `user` u on u.id = cd.user_id and cd.is_del = 0 and u.is_del = 0
+		GROUP BY u.id
+		) commission on commission.uid = u.id
+
+		LEFT JOIN
+		(
+		select
+		user_id uid
+		,COUNT(badge_id) badgeCount
+		from user_badge_ref
+		WHERE is_del = 0
+		GROUP BY user_id
+		) userBadge on userBadge.uid = u.id
+
+		LEFT JOIN
+		(
+		select
+		COUNT(o.id) orderNumCount
+		,u.id uid
+		from `order` o
+		LEFT JOIN `user` u on u.id = o.user_id and o.is_del = 0
+		where u.is_del = 0
+		GROUP BY u.id
+		) orderInfo on orderInfo.uid = u.id
+
+		LEFT JOIN
+		(
+		select 
+		o.user_id
+		,FORMAT(AVG(IFNULL(se.star,3)),1) avgStar
+		 from service_evaluation `se`
+		LEFT JOIN `order` o on o.id = se.order_id and o.is_del = 0
+		LEFT JOIN `user` u on u.id = o.user_id and u.is_del = 0
+		where se.is_del = 0 
+		GROUP BY u.id
+		) userAvgStar on userAvgStar.user_id = u.id
+		
+
+		LEFT JOIN
+		(
+		select
+		COUNT(user_id) topicCount
+		,user_id
+		from
+		forum_topic
+		where is_del = 0
+		GROUP BY user_id
+		) userTopic on userTopic.user_id = u.id
+		
+		LEFT JOIN 
+		(
+		SELECT 
+		COUNT(user_id) companionTopicCount
+		,user_id
+		from companion_topic
+		WHERE is_del = 0
+		GROUP BY user_id
+		) companionTopic on companionTopic.user_id = u.id
+
+		LEFT JOIN
+		(
+		select
+		user_id
+		,COUNT(user_id) userTravelNoteCount
+		from travel_note
+		where is_del = 0
+		GROUP BY user_id
+		) userTravelNote on userTravelNote.user_id = u.id
+
+		LEFT JOIN
+		(
+		select
+		user_id
+		,COUNT(user_id) userTrackCount
+		from track
+		where is_del = 0
+		GROUP BY user_id
+		) userTrack on userTrack.user_id = u.id
+
+		LEFT JOIN
+		(
+		select
+		user_id
+		,COUNT(user_id) feedbackCount
+		from feedback
+		where is_del = 0
+		GROUP BY user_id
+		) userFeedback on userFeedback.user_id = u.id
+		where u.id = #{userId}
+		group by u.id
+		
+	</select>
+
+</mapper>

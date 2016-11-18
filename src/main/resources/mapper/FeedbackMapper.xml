@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="tech.youmu.ckl.mapper.FeedbackMapper" >
+
+  <resultMap id="FeedbackMap" type="Feedback" >
+    <id column="id" property="id"/>
+    <result column="content" property="content"  />
+    <result column="create_time" property="createTime"  />
+    <result column="modify_time" property="modifyTime"  />
+    <result column="status" property="status"/>
+    <result column="is_del" property="isDel"/>
+    <result column="handle_time" property="handleTime"  />
+    
+    <association property="user" column="user_id" javaType="User">
+		<id column="uid" property="id" />
+		<result column="unickName" property="nickName" />
+		<result column="umobile" property="mobile" />
+	</association>
+    
+	 <association property="employee" column="handle_emp_id" javaType="Employee">
+		<id column="eid" property="id" />
+		<result column="erealName" property="realName" />
+	</association>
+  </resultMap>
+  
+  <select id="getById" resultMap="FeedbackMap" parameterType="java.lang.Long" >
+    select 
+    f.*
+    from feedback f
+    where f.id = #{id,jdbcType=BIGINT} AND f.is_del = 0
+  </select>
+  
+  <delete id="deleteById" parameterType="java.lang.Long" >
+    update feedback
+    set 
+    	is_del = true
+    	,modify_time=now()
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+  <insert id="save"  >
+    insert into feedback 
+    (
+      user_id
+    , content
+    ,create_time
+    , status
+    , is_del
+    
+      )
+    values (
+	  #{userId}
+    , #{content}
+    , now()
+    , 0
+    ,0
+      )
+  </insert>
+  
+  
+  <sql id="whereSql">
+  	<where>
+	  	  <if test="keywords != null and keywords!=''" >
+	        (
+				u.mobile like concat('%',#{keywords},'%') 
+				or 
+				u.nick_name like concat('%',#{keywords},'%') 
+			)
+	      </if>
+	      <if test="content != null and content != ''" >
+	       AND f.content = #{content,jdbcType=VARCHAR}
+	      </if>
+	      <if test="status != null and status != -1 " >
+	       AND f.status = #{status}
+	      </if>
+	      <if test="beginTime != null ">
+				AND u.create_time >= #{beginTime}
+			</if>
+			<if test="endTime != null">
+				AND u.create_time &lt;= #{endTime}
+			</if>
+			<if test="userId != null">
+				AND u.id = #{userId}
+			</if>
+			AND f.is_del = 0
+     </where>
+  </sql>
+  
+  <!-- 处理反馈 -->
+   <update id="handleById" parameterType="Feedback" >
+    update feedback
+    set 
+      status = #{status,jdbcType=BIT},
+      handle_time = #{handleTime,jdbcType=TIMESTAMP}
+      ,modify_time=now()
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <update id="updateById" parameterType="Feedback" >
+    update feedback
+    set user_id = #{user.id},
+      content = #{content,jdbcType=VARCHAR},
+      modify_time=now(),
+      status = #{status,jdbcType=BIT},
+      handle_time = #{handleTime,jdbcType=TIMESTAMP}
+      
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="FeedbackQuery" resultMap="FeedbackMap">
+		select f.*
+		,u.id uid
+		,u.mobile umobile
+		,u.nick_name unickName
+		,e.id eid
+		,e.real_name erealName
+		from feedback f
+		left join user u
+			on u.id = f.user_id and u.is_del = 0
+		left join employee e
+			on e.id = f.handle_emp_id and e.is_del = 0
+		<include refid="whereSql"></include>
+		<include refid="orderSql"></include>
+	      order by f.create_time desc
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="FeedbackQuery" resultType="long">
+		select count(f.id) from feedback f
+		left join user u
+			on u.id = f.user_id and u.is_del = 0
+		left join employee e
+			on e.id = f.handle_emp_id and e.is_del = 0
+		<include refid="whereSql"></include>
+	</select>
+</mapper>

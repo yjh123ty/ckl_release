@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.ServiceRuleMapper">
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="ServiceRule">
+    insert into point_service_rule 
+    (base
+    ,`condition`
+    ,persent
+    ,create_time
+    )
+    values 
+    (#{base}
+    ,#{condition}
+    ,#{persent}
+    ,now()
+    )
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update point_service_rule
+    set is_del = true,modify_time=now()
+    where id = #{id}
+  </delete>
+ 
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="ServiceRule">
+    update point_service_rule
+    set base = #{base},
+     `condition`= #{condition},
+      persent = #{persent},
+      modify_time=now()
+    where id = #{id}
+  </update>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="ServiceRuleMap">
+    select 
+    *
+	from point_service_rule 
+    where id = #{id} AND is_del = 0
+  </select>
+  
+	<!-- 获取所有的职称 -->
+	<select id="getAll" resultType="ServiceRule">
+		select * from point_service_rule where is_del = 0
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<if test="beginTimeStr != null and beginTimeStr != '' ">
+				AND create_time >= #{beginTimeStr}
+			</if>
+			<if test="endTimeStr != null and endTimeStr != '' ">
+				AND create_time &lt;= #{endTimeStr}
+			</if>
+			AND is_del = 0
+		</where>
+	</sql>
+	
+	<resultMap id="ServiceRuleMap" type="ServiceRule">
+		<id column="id" property="id"/>
+		<result column="base" property="base" />
+		<result column="condition" property="condition" />
+		<result column="persent" property="persent" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+	</resultMap>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="ServiceRuleMap">
+		select *
+		from point_service_rule 
+		<include refid="whereSql"></include>
+		<include refid="orderSql" />
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select count(id) from point_service_rule 
+		<include refid="whereSql"></include>
+	</select>
+	
+	
+	<!-- 根据输入分数查询奖励比例 -->
+	<select id="getPersentByCondition" parameterType="java.lang.Integer" resultMap="ServiceRuleMap">
+		select * 
+		from point_service_rule 
+		where `condition` = #{condition}
+	</select>
+</mapper>

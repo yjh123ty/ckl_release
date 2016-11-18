@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.TravelNoteMapper">
+
+<select id="getById" resultType="tech.youmu.ckl.domain.TravelNote">
+	 	select
+	 		t.id,
+			t.title,
+			t.distance,
+			t.capita_cost as capitaCost,
+			t.route_img as routeImg,
+			t.day_count as dayCount,
+			t.depart_time as departTime
+		from 
+			travel_note  t
+		where t.id = #{id}
+	 </select>
+	<update id="deleteUserTravelNote" parameterType="long">
+		update travel_note set is_del = 1
+		where id = #{id} and is_del != 1
+	</update>
+
+	<resultMap type="TravelNote" id="BaseResultMap" autoMapping="true">
+		<id column="id" property="id"/>
+		<collection property="suitNames" ofType="java.lang.String">
+	    	<result column="suitName"/>
+    	</collection>
+        <collection property="travelNoteContents" ofType="TravelNoteContent">
+        	<id column="tcid" property="id"/>
+        	<result column="tccontent" property="content"/>
+        	<result column="tctype" property="type"/>
+        	<result column="tcorder" property="order"/>
+        </collection>
+    </resultMap>
+    
+    <sql id="whereSql">
+    	<where>
+	    	t.is_del = 0 and t.user_id is not null
+	    	<if test="userId != null">
+				AND u.id = #{userId}
+			</if>
+	    	<if test="startTime != null">
+	    		and t.create_time >= #{startTime}
+	    	</if>
+	    	<if test="endTime != null">
+	    		and t.create_time &lt;= #{endTime}
+	    	</if>
+	    	<if test="keyword != null">
+	    		and 
+	    		(
+	    			t.title like concat('%', #{keyword}, '%')
+	    			or
+	    			u.mobile like concat('%',#{keyword},'%')
+					or 
+					r.name like concat('%',#{keyword},'%')
+	    		)
+	    	</if>
+    	</where>
+    </sql>
+    
+   <!--  <select id="getByQuery" parameterType="TravelNoteQuery" resultMap="BaseResultMap">
+		select
+			t.id,
+			title,
+			r.name as routeName,
+			ifnull(t.distance,r.distance) as distance,
+			u.mobile as userMobile,
+			ifnull(t.day_count,r.days) as dayCount,
+			t.depart_time as departTime,
+			ifnull(t.capita_cost, r.cost) as capitaCost,
+			tc.id tcid,
+			tc.content tccontent,
+			tc.type tctype
+		from  travel_note t
+		left join route r on r.id = t.route_id and r.is_del=0
+		left join travel_note_content tc on tc.travel_note_id = t.id and tc.is_del = 0
+		left join user u on u.id = t.user_id and u.is_del = 0
+		<include refid="whereSql" />
+		<if test="start != null">
+			and t.id >= (select id from travel_note limit #{start},1) 
+		</if>
+		order by tc.`order` asc
+		<if test="pageSize != null">
+			limit #{pageSize}
+		</if>
+	</select> -->
+	
+	 <select id="getTravelNoteById" parameterType="TravelNoteQuery" resultMap="BaseResultMap">
+	 	select
+	 		t.id,
+			t.title,
+			t.distance,
+			t.capita_cost as capitaCost,
+			t.route_img as routeImg,
+			t.day_count as dayCount,
+			t.depart_time as departTime,
+			t.create_time as createTime,
+			tns.name suitName,
+			tnc.id tcid,
+			tnc.content tccontent,
+			tnc.type tctype,
+			tnc.order tcorder
+		from 
+			travel_note  t
+		left join travel_note_suit tns on tns.travel_note_id = t.id and tns.is_del = 0
+		left join travel_note_content tnc on tnc.travel_note_id = t.id and tnc.is_del = 0
+		where t.id = #{id}
+		order by tnc.order asc
+	 </select>
+	 
+	 <select id="getByQuery" parameterType="TravelNoteQuery" resultMap="BaseResultMap">
+	 	select
+	 		t.*,
+			tns.name suitName
+		from (
+			select
+				t.id,
+				t.title,
+				t.distance,
+				t.capita_cost as capitaCost,
+				t.route_img as routeImg,
+				t.day_count as dayCount,
+				t.depart_time as departTime,
+				t.create_time as createTime,
+				u.id as userId,
+				u.mobile as userMobile,
+				r.id as routeId,
+				r.name as routeName
+				from travel_note t
+				left join user u on u.id=t.user_id and u.is_del=0
+				left join user_route ur on ur.id = t.user_route_id and ur.is_del = 0
+				left join route r on r.id=ur.route_id and r.is_del=0
+				<include refid="whereSql"></include>
+				<if test="currentPage > 0 and pageSize > 0">
+					limit #{start},#{pageSize}
+				</if> 
+		) t
+		left join travel_note_suit tns on tns.travel_note_id = t.id and tns.is_del = 0
+		order by t.createTime desc
+	 </select>
+	
+    <select id="getCountByQuery" parameterType="TravelNoteQuery" resultType="long">
+		select
+			count(t.id)
+			from travel_note t
+			left join user u on u.id=t.user_id and u.is_del=0
+			left join user_route ur on ur.id = t.user_route_id and ur.is_del = 0
+			left join route r on r.id=ur.route_id and r.is_del=0
+		<include refid="whereSql" />
+	</select>
+
+	<resultMap type="tech.youmu.ckl.app.vo.TravelNoteMonthInfo" id="travelNoteMonthInfoMap">  
+        <result column="month" property="month"/>  
+        <collection property="travelNoteInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.TravelNoteInfo" >
+          <result column="travelNoteId" property="travelNoteId"/> 
+          <result column="day" property="day"/> 
+          <result column="routeImg" property="routeImg"/> 
+          <result column="title" property="title"/> 
+          <result column="distance" property="distance"/> 
+          <result column="dayCount" property="dayCount"/> 
+        </collection>  
+    </resultMap>
+  <select id="findTravelNoteMonthInfo" resultMap="travelNoteMonthInfoMap">
+     select 
+    	tn.id travelNoteId,
+    	if(DATE_FORMAT(tn.create_time, '%Y')=DATE_FORMAT(now(), '%Y'),DATE_FORMAT(tn.create_time, '%m月'),DATE_FORMAT(tn.create_time, '%Y年%m月'))  `month`,
+		DATE_FORMAT(tn.create_time, '%d日')  day,
+		tn.route_img routeImg,tn.title title,
+		tn.distance,tn.day_count dayCount
+    from travel_note tn
+    where tn.user_id = #{userId} and tn.is_del =0 
+  </select>
+  
+  <resultMap type="tech.youmu.ckl.app.vo.TravelNoteDetailInfo" id="travelNoteDetailInfoMap">  
+        <result column="travelNoteId" property="travelNoteId"/>  
+        <result column="title" property="title"/>
+        <result column="time" property="time"/>
+        <result column="userName" property="userName"/>
+        <result column="departTime" property="departTime"/>
+        <result column="dayCount" property="dayCount"/>
+        <result column="capitaCost" property="capitaCost"/>
+       	<collection property="suitNames" ofType="java.lang.String">
+	    	<result column="suitName"/>
+    	</collection>
+        <collection property="travelNoteContentInfos" javaType="java.util.List" ofType="tech.youmu.ckl.app.vo.TravelNoteContentInfo" >
+          <result column="travelNoteContentId" property="travelNoteContentId"/> 
+          <result column="type" property="type"/> 
+          <result column="content" property="content"/> 
+        </collection>  
+    </resultMap>
+  
+  <select id="getTravelNoteDetailInfo" resultMap="travelNoteDetailInfoMap">
+    select 
+    	tn.id travelNoteId,tn.title title,DATE_FORMAT(tn.create_time,'%Y-%m-%d') time,
+    	u.real_name userName,DATE_FORMAT(tn.depart_time,'%Y-%m-%d') departTime,
+    	tn.day_count dayCount,tns.name suitName,tn.capita_cost capitaCost,tnc.type,tnc.content,
+    	tnc.id travelNoteContentId
+    from travel_note tn
+	left join travel_note_content tnc on tnc.travel_note_id = tn.id and tnc.is_del =0
+    left join travel_note_suit tns on tns.travel_note_id = tn.id and tns.is_del=0
+    left join user u on u.id = tn.user_id and u.is_del = 0
+    <where>
+    	tn.is_del =0 
+    	<if test="travelNoteId">
+    		and tn.id = #{travelNoteId}
+    	</if>
+    	<if test="userRouteId">
+    		and tn.user_route_id = #{userRouteId}
+    	</if>
+    </where>
+    order by tnc.`order`
+  </select>
+  
+  <update id="updateTravelNote">
+    update travel_note
+    <set>
+    	modify_time =now(),
+      <if test="title != null">
+        title = #{title},
+      </if>
+      <if test="capitaCost != null">
+        capita_cost = #{capitaCost},
+      </if>
+      <if test="dayCount != null">
+        day_count = #{dayCount},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+   <update id="deleteTravelNoteContentByTravelNoteId" >
+    update travel_note_content set is_del = 1
+    where travel_note_id = #{travelNoteId}
+  </update>
+	
+  <insert id="batchSaveTravelNoteContent">
+	insert into travel_note_content ( type, travel_note_id, 
+      is_del, create_time,  
+      `order`, content) values
+	<foreach collection="list" item="item" index="index" separator=",">
+		(#{item.type}, #{travelNoteId},0,now(),#{item.order}, #{item.content})
+	</foreach>
+  </insert>
+  
+   <update id="deleteTravelNoteSuitByTravelNoteId" >
+    update travel_note_suit set is_del = 1
+    where travel_note_id = #{travelNoteId}
+  </update>
+  <insert id="batchSaveTravelNoteSuit">
+	insert into travel_note_suit ( travel_note_id, name,is_del, create_time) values
+	<foreach collection="suitNames" item="suitName" index="index" separator=",">
+		(#{travelNoteId},#{suitName},0,now())
+	</foreach>
+  </insert>
+  
+  <insert id="saveTravelNote" useGeneratedKeys="true"  keyProperty="id" >
+    insert into travel_note ( title, user_route_id, 
+      distance, capita_cost, route_img, 
+      user_id, day_count, depart_time, 
+      is_del, create_time
+      )
+    values ( #{title}, #{userRouteId}, 
+      #{distance}, #{capitaCost}, #{routeImg}, 
+      #{userId}, #{dayCount}, #{departTime,}, 
+      0,now()
+      )
+  </insert>
+  
+  
+   <select id="getByUserRouteId" resultType="tech.youmu.ckl.domain.TravelNote">
+     select 
+    	id, title, user_route_id userRouteId, distance,capita_cost capitaCost, route_img routeImg,user_id userId,day_count dayCount,depart_time departTime
+    from travel_note 
+    where is_del =0 and user_route_id = #{userRouteId}
+  </select>
+  
+  <select id="getTravelNoteContentById" resultType="tech.youmu.ckl.domain.TravelNoteContent" >
+    select 
+    	id,content,type
+    from travel_note_content
+    where id = #{id}
+  </select>
+  
+</mapper>

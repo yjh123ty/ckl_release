@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.UserMapper">
+
+
+	<resultMap id="UserMap" type="User">
+		<id column="id" property="id"/>
+		<result column="mobile" property="mobile" />
+		<result column="password" property="password" />
+		<result column="nick_name" property="nickName"></result>
+		<result column="real_name" property="realName"></result>
+		<result column="status" property="status" />
+		<result column="head_icon" property="headIcon" />
+		<result column="sex" property="sex" />
+		<result column="code" property="code" />
+		<result column="identity_card" property="identityCard" />
+		<result column="Integral" property="integral" />
+		<result column="is_recharge" property="isRecharge" />
+		<result column="is_attend" property="isAttend" />
+		<result column="balance" property="balance" />
+		<result column="level" property="level" />
+		<result column="pay_password" property="payPassword" />
+		<result column="is_del" property="isDel" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+	</resultMap>
+	
+	
+	<!-- 禁用一个用户 -->
+	<update id="disableById" parameterType="long">
+		update `user` 
+		set 
+			status=-1
+			,modify_time=now()
+		where id=#{id} and  status != -1
+	</update>
+	
+	<!-- 启用一个用户 -->
+	<update id="invokeById" parameterType="long">
+		update `user` 
+		set status=0
+			,modify_time=now()
+		where id=#{id} and  status != 0
+	</update>
+	
+	
+	<!-- 通过id查询用户对象 -->
+	<select id="getById" parameterType="long" resultMap="UserMap">
+		select 
+		u.* 
+		from `user` u
+		where u.id=#{id} and u.is_del = 0
+	</select>
+	
+	
+	
+	<!-- 查询所有的用户对象 -->
+	<select id="getAll" resultType="User">
+		select * from `user` u where u.is_del = 0
+	</select>
+	
+	<!-- 查询条件 -->
+	<sql id="whereSql">
+		<where>
+			<!-- 关键词：用户账号或昵称或真实姓名 -->
+			<if test="keywords!=null and keywords!=''">
+			(
+				u.mobile like concat('%',#{keywords},'%') 
+				or 
+				u.nick_name like concat('%',#{keywords},'%') 
+				or 
+				u.real_name like concat('%',#{keywords},'%')
+			)
+			</if>
+			<if test="status!=null">
+				AND u.status = #{status}
+			</if>
+			<if test="beginTime != null ">
+				AND u.create_time >= #{beginTime}
+			</if>
+			<if test="endTime != null">
+				AND u.create_time &lt;= #{endTime}
+			</if>
+			AND u.is_del = 0
+		</where>
+	</sql>
+	
+	<!-- 分页+高级查询 -->
+	<select id="queryList" parameterType="UserQuery" resultMap="UserMap">
+		select
+		u.* 
+		from `user` u
+		<include refid="whereSql"></include>
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCount" parameterType="UserQuery" resultType="long">
+		select count(u.id) from `user` u
+		<include refid="whereSql"></include>
+	</select>
+	
+	
+	<select id="getByPhoneNumber" resultType="tech.youmu.ckl.domain.User">
+		select 
+			u.id,u.password,u.status
+		from user u
+		where u.mobile=#{mobile} and u.is_del =0
+	</select>
+	
+	<select id="getByCode" resultType="tech.youmu.ckl.domain.User">
+		select 
+			u.id,u.is_attend isAttend
+		from user u
+		where u.code=#{code} and u.is_del =0
+	</select>
+	
+	<select id="getUserInfoByUserId" resultType="tech.youmu.ckl.app.vo.UserInfo">
+		select 
+			u.nick_name nickName,u.real_name realName,u.head_icon headIcon,u.level level,u.mobile accountNumber,u.is_attend isAttend,
+			u.integral integral,u.sex sex,u.identity_card identityCard,balance balance,if(u.pay_password is null,0,1) isSetPayPassword,
+			if(count(uc.id)>0,1,0) isCar,u.is_allow isAllow
+		from user u
+		left join user_car uc on uc.user_id = u.id and uc.is_del=0
+		where u.id=#{userId}  and u.is_del =0
+	</select>
+	
+	  
+	<insert id="save" useGeneratedKeys="true"  keyProperty="id">
+	  insert into user ( mobile, password, 
+      nick_name, real_name, status, 
+      head_icon, sex, level, 
+      identity_card, balance, 
+      integral, code,is_allow,is_attend,is_recharge, latitude, 
+      longtitude, pay_password, is_del, 
+      create_time)
+    values ( #{mobile}, #{password}, 
+      #{nickName}, #{realName}, #{status}, 
+      #{headIcon}, #{sex}, 0, 
+      #{identityCard}, #{balance}, 
+      0, #{code},1,0, 0,0, 
+      0, #{payPassword},0,now())
+  
+	</insert>
+	
+	<update id="update" >
+    update user
+    <set >
+     	modify_time = now(),
+      <if test="mobile != null" >
+        mobile = #{mobile},
+      </if>
+      <if test="password != null" >
+        password = #{password},
+      </if>
+      <if test="nickName != null" >
+        nick_name = #{nickName},
+      </if>
+      <if test="realName != null" >
+        real_name = #{realName},
+      </if>
+      <if test="status != null" >
+        status = #{status},
+      </if>
+      <if test="headIcon != null" >
+        head_icon = #{headIcon},
+      </if>
+      <if test="sex != null" >
+        sex = #{sex},
+      </if>
+      <if test="level != null" >
+        level = #{level},
+      </if>
+      <if test="identityCard != null" >
+        identity_card = #{identityCard},
+      </if>
+      <if test="isRecharge != null" >
+        is_recharge = #{isRecharge},
+      </if>
+       <if test="isAttend != null" >
+        is_attend = #{isAttend},
+      </if>
+      <if test="balance != null" >
+        balance = #{balance},
+      </if>
+      <if test="integral != null" >
+        integral = #{integral},
+      </if>
+      <if test="code != null" >
+        code = #{code},
+      </if>
+       <if test="isAllow != null" >
+        is_allow = #{isAllow},
+      </if>
+      <if test="latitude != null" >
+        latitude = #{latitude},
+      </if>
+      <if test="longtitude != null" >
+        longtitude = #{longtitude},
+      </if>
+      <if test="payPassword != null" >
+        pay_password = #{payPassword},
+      </if>
+      <if test="isDel != null" >
+        is_del = #{isDel},
+      </if>
+    </set>
+    where id = #{id}
+  </update>
+  
+  
+  <select id="findCode" resultType="java.lang.String">
+  	select code from user
+  </select>
+  
+  <select id="findUserByRiders" resultType="tech.youmu.ckl.domain.User">
+		select 
+			u.id,u.nick_name nickName,u.head_icon headIcon,u.latitude,u.longtitude 
+		from `user` u 
+		where u.is_del = 0 and u.id !=#{userId}
+		and (EXISTS (select uf.id from user_friend uf where uf.friend_id =#{userId} and u.is_allow=0 and uf.is_del =0) 
+					or u.is_allow =1 or u.is_allow is null
+					)
+	</select>
+	
+  <update id="addBalance" >
+    update user
+    <set >
+     	modify_time = now(),
+        balance = balance+#{balance}
+    </set>
+    where id = #{userId}
+  </update>
+  
+  
+  <select id="findGroupId" resultType="java.lang.String">
+  	select u.group_id groupId from user u
+  	where u.is_del=0 and u.id in
+  	 <foreach item="userId" collection="userIds" separator="," open="(" close=")" index="">
+                #{userId}
+     </foreach>
+     group by u.group_id
+  </select>
+
+  <update id="batchUpdateGroupId" >
+    update user
+    <set>
+     	modify_time = now(),
+        group_id = #{groupId}
+    </set>
+    where id in
+    <foreach item="userId" collection="userIds" separator="," open="(" close=")" index="">
+                #{userId}
+     </foreach>
+  </update>
+  
+</mapper>

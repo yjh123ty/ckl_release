@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Typeper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.StarsRuleMapper">
+
+ <!-- 添加一个 -->
+  <insert id="save" parameterType="StarsRule">
+    insert into star_rule (star, star_ratio, create_time,is_del)
+    values (#{star}, #{starRatio}, now(),0)
+  </insert>
+  
+  <!-- 通过主键删除一个 -->
+  <delete id="deleteById" parameterType="long">
+    update star_rule
+    set is_del = true,modify_time=now()
+    where id = #{id}
+  </delete>
+ 
+  <!-- 更新一条记录 -->
+  <update id="updateById" parameterType="StarsRule">
+    update star_rule
+    set 
+      star = #{star},
+      star_ratio = #{starRatio},
+      modify_time=now()
+    where id = #{id}
+  </update>
+  
+  <!-- 通过主键获取一个 -->
+  <select id="getById" parameterType="long" resultMap="StarsRuleMap">
+    select 
+    *
+	from star_rule 
+    where id = #{id} AND is_del = 0
+  </select>
+  
+	<!-- 获取所有 -->
+	<select id="getAll" resultType="StarsRule">
+		select * from star_rule where is_del = 0
+	</select>
+	
+	<!-- 排序 -->
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+				${item}
+			</foreach>
+		</if>
+	</sql>
+	
+	<resultMap id="StarsRuleMap" type="StarsRule">
+		<id column="id" property="id"/>
+		<result column="star" property="star" />
+		<result column="star_ratio" property="starRatio" />
+		<result column="create_time" property="createTime" />
+		<result column="modify_time" property="modifyTime" />
+		<result column="is_del" property="isDel" />
+	</resultMap>
+	
+	<!-- 分页+高级查询 -->
+	<select id="getByQuery" parameterType="BaseQuery" resultMap="StarsRuleMap">
+		select *
+		from star_rule 
+		<include refid="orderSql" />
+		<if test="pageSize>0">
+			limit #{start},#{pageSize}
+		</if>
+	</select>
+	
+	<!-- 查询分页条数 -->
+	<select id="getCountByQuery" parameterType="BaseQuery" resultType="long">
+		select count(id) from star_rule 
+	</select>
+	
+	<!-- 根据星数级别获取对应获得的奖励等级 -->
+	<select id="getRatioByStars" parameterType="java.lang.Double" resultMap="StarsRuleMap">
+		select * 
+		from star_rule 
+		where `star` = #{star}
+	</select>
+</mapper>

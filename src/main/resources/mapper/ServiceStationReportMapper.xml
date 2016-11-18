@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.youmu.ckl.mapper.ServiceStationReportMapper">
+  	<sql id="whereSql">
+		<where>
+			s.type = 2 and s.is_del = 0
+			<if test="keyword != null">
+				and s.name like concat('%', #{keyword}, '%')
+			</if>
+			<if test="stationId != null and stationId != -1">
+				and s.id = #{stationId}
+			</if>
+		</where>
+	</sql>
+	
+	<sql id="pageSql">
+		<if test="currentPage > 0 and pageSize > 0">
+			limit #{start},#{pageSize}
+		</if>
+	</sql>
+	
+	<sql id="orderSql">
+		<if test="sortItem != null">
+			order by
+			<foreach collection="sortItem" item="item" separator=",">
+			   ${item}	
+			</foreach>
+		</if>
+	</sql>
+	<select id="findServiceStationReports"  parameterType="ServiceStationReportQuery" resultType="ServiceStationReport">
+		select 
+		s.id as stationId, 
+		s.name as stationName,
+		concat(s.district_address,s.address) as stationAddress,
+		ifnull(avg(se.star),0) as avgStar,
+		sum(ifnull(o.total_amount,0)) as allIncome,
+		sum(if(o.order_type=1,o.total_amount,0)) as hotelIncome,
+		sum(if(o.order_type=2,o.total_amount,0)) as restaurantIncome,
+		sum(if(o.order_type=3,o.total_amount,0)) as carCareIncome,
+		sum(if(o.order_type=4,o.total_amount,0)) as carRepairIncome,
+		sum(if(o.order_type=5,o.total_amount,0)) as roadSideIncome
+		from `station` s
+		left join `order` o on s.id = o.station_id and o.is_del = 0  and o.`status` > 6
+		<if test="startTime != null">
+				and DATE_FORMAT(o.create_time,'%Y-%m') >= #{startTime}
+		</if>
+		<if test="endTime != null">
+			and DATE_FORMAT(o.create_time,'%Y-%m') &lt;= #{endTime}
+		</if>
+		left join service_evaluation se on se.order_id = o.id and se.is_del = 0
+		<include refid="whereSql" />
+		group by s.id
+		<include refid="orderSql"/>
+		<include refid="pageSql"/>
+	</select>
+	
+	<select id="getServiceStationReportsCountByQuery" parameterType="ServiceStationReportQuery" resultType="long">
+		select 
+		count(distinct s.id)
+		from `station` s
+		left join `order` o on s.id = o.station_id and o.is_del = 0  and o.`status` > 6 
+		<if test="startTime != null">
+				and DATE_FORMAT(o.create_time,'%Y-%m') >= #{startTime}
+		</if>
+		<if test="endTime != null">
+			and DATE_FORMAT(o.create_time,'%Y-%m') &lt;= #{endTime}
+		</if>
+		left join service_evaluation se on se.order_id = o.id and se.is_del = 0
+		<include refid="whereSql" />
+	</select>
+</mapper>
